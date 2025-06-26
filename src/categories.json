@@ -1,0 +1,9 @@
+[
+  { "name": "Document", "color": "#FFD700" },
+  { "name": "Meeting", "color": "#4F8EF7" },
+  { "name": "Emails", "color": "#FF9500" },
+  { "name": "Feature work", "color": "#34C759" },
+  { "name": "Discussion", "color": "#AF52DE" },
+  { "name": "Learning", "color": "#00B894" },
+  { "name": "PR Review", "color": "#FF5E57" }
+]

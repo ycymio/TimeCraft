@@ -1,0 +1,11 @@
+[
+  { "name": "Document", "color": "#A3B6D9" },
+  { "name": "Meeting", "color": "#A7C7E7" },
+  { "name": "Emails", "color": "#FFD6A5" },
+  { "name": "Feature work", "color": "#B5EAD7" },
+  { "name": "Discussion", "color": "#FFB7B2" },
+  { "name": "Learning", "color": "#C7CEEA" },
+  { "name": "PR Review", "color": "#B2B2B2" },
+  { "name": "Vibe Coding", "color": "#D4A373" },
+  { "name": "Free Time", "color": "#F6C430" }
+]
