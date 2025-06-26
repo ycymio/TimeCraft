@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
-const CSV_FILE = path.join(__dirname, 'activities.csv');
+const CSV_FILE = path.join(__dirname, 'data', 'activities.csv');
 
 app.use(bodyParser.json());
 
@@ -186,7 +186,8 @@ app.get('/api/summary', (req, res) => {
 });
 
 // ====== 每日心得 CSV 相关 ======
-const IDEAS_CSV = path.join(__dirname, 'daily_ideas.csv');
+const IDEAS_CSV = path.join(__dirname, 'data', 'daily_ideas.csv');
+const TODOS_CSV = path.join(__dirname, 'data', 'todos.csv');
 function ensureIdeasHeader() {
   if (!fs.existsSync(IDEAS_CSV)) {
     fs.writeFileSync(IDEAS_CSV, 'Date,Idea\n');
@@ -224,7 +225,6 @@ app.post('/api/ideas', (req, res) => {
 });
 
 // ====== Todos CSV API ======
-const TODOS_CSV = path.join(__dirname, 'todos.csv');
 function ensureTodosHeader() {
   if (!fs.existsSync(TODOS_CSV)) {
     fs.writeFileSync(TODOS_CSV, 'Text\n');
