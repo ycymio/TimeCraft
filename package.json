@@ -11,7 +11,7 @@
     "server": "node server.js",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
     "dev:host": "vite --host 0.0.0.0",
-    "dev:azure": "vite --host 0.0.0.0 --port 5173",
+    "dev:azure": "vite --host 0.0.0.0 --port 5173 --allowed-hosts forsteri.southeastasia.cloudapp.azure.com",
     "start:azure": "concurrently \"npm run server\" \"npm run dev:azure\""
   },
   "dependencies": {

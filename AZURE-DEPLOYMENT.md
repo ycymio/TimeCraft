@@ -102,7 +102,16 @@ pm2 startup
 
 ### 故障排除
 
-#### 1. 无法访问外网
+#### 1. Host not allowed 错误
+如果遇到 "To allow this host, add to `server.allowedHosts`" 错误：
+- ✅ 已在 vite.config.ts 中配置 allowedHosts
+- ✅ 启动脚本已包含 --allowed-hosts 参数
+- 如果仍有问题，手动启动：
+```bash
+npm run dev -- --host 0.0.0.0 --allowed-hosts forsteri.southeastasia.cloudapp.azure.com
+```
+
+#### 2. 无法访问外网
 - 检查Azure安全组是否开放了端口5173和3001
 - 确认VM的公网IP地址是否正确绑定到域名
 - 检查本地防火墙设置
