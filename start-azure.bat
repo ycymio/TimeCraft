@@ -65,6 +65,7 @@ echo    Backend (Domain): http://forsteri.southeastasia.cloudapp.azure.com:3001
 echo.
 echo 🔧 Make sure Azure firewall allows ports 5173 and 3001
 echo 🔧 Public IP: 20.6.81.42 ^| Internal IP: 10.0.0.4
+echo 🔧 HMR (24678) runs on localhost only for development
 echo.
 echo 🔧 Make sure Azure firewall allows ports 5173 and 3001
 echo.

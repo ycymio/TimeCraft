@@ -11,7 +11,7 @@ export AZURE_DOMAIN="forsteri.southeastasia.cloudapp.azure.com"
 # Port Configuration
 export FRONTEND_PORT="5173"
 export BACKEND_PORT="3001"
-export HMR_PORT="24678"
+export HMR_PORT="24678"  # HMR only works on localhost
 
 echo "=== Azure IP Configuration ==="
 echo "Public IP: $AZURE_PUBLIC_IP"
@@ -19,6 +19,7 @@ echo "Internal IP: $AZURE_INTERNAL_IP"
 echo "Domain: $AZURE_DOMAIN"
 echo "Frontend Port: $FRONTEND_PORT"
 echo "Backend Port: $BACKEND_PORT"
+echo "HMR Port: $HMR_PORT (localhost only)"
 echo ""
 
 echo "=== Access URLs ==="

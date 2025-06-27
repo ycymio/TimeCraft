@@ -50,6 +50,8 @@ npm run dev:azure
   - 端口 3001 (TCP) - Express后端服务器
   - 端口 22 (TCP) - SSH (如果需要)
 
+**注意:** 端口 24678 (HMR) 仅用于本地开发，无需对外开放。
+
 #### 2. 网络安全组 (NSG) 配置
 ```
 规则名称: TimeCraft-Frontend
@@ -109,7 +111,18 @@ pm2 startup
 
 ### 故障排除
 
-#### 1. Host not allowed 错误
+#### 1. WebSocket/HMR 错误
+如果遇到 "Error: listen EADDRNOTAVAIL: address not available" 错误：
+- ✅ HMR已配置为仅绑定到 localhost
+- ✅ 公网访问仍然正常工作
+- HMR (热模块替换) 仅在本地开发时可用
+
+**说明:** 
+- 主服务器 (5173) 绑定到 0.0.0.0，支持外网访问
+- HMR服务器 (24678) 仅绑定到 localhost，用于开发时的热重载
+- 这不影响生产环境的功能
+
+#### 2. Host not allowed 错误
 如果遇到 "To allow this host, add to `server.allowedHosts`" 错误：
 - ✅ vite.config.ts 已配置 `allowedHosts: true` (允许所有主机)
 - ✅ 配置了 `host: '0.0.0.0'` (监听所有接口)

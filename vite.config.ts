@@ -14,7 +14,7 @@ export default defineConfig({
     allowedHosts: true,
     hmr: {
       port: 24678, // Use a different port for HMR to avoid conflicts
-      host: '20.6.81.42' // Use the actual public IP for HMR
+      host: 'localhost' // HMR should only bind to localhost
     }
   },
   preview: {
