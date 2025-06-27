@@ -5,20 +5,24 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Listen on all local IPs (equivalent to 0.0.0.0)
+    host: '0.0.0.0', // Listen on all interfaces
     port: 5173,
     strictPort: true,
     open: false, // Don't auto-open browser in VM
     cors: true, // Enable CORS for cross-origin requests
+    // Allow all hosts (most permissive setting)
+    allowedHosts: true,
     hmr: {
-      port: 24678 // Use a different port for HMR to avoid conflicts
+      port: 24678, // Use a different port for HMR to avoid conflicts
+      host: '20.6.81.42' // Use the actual public IP for HMR
     }
   },
   preview: {
-    host: true, // Listen on all local IPs
+    host: '0.0.0.0', // Listen on all interfaces
     port: 4173,
     strictPort: true,
-    cors: true
+    cors: true,
+    allowedHosts: true
   },
   base: './' // Use relative paths for assets
 })

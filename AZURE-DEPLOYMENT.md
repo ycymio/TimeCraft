@@ -30,9 +30,16 @@ npm run dev:azure
 
 ### 访问地址
 
-- **外网访问:** http://forsteri.southeastasia.cloudapp.azure.com:5173
+- **外网访问 (公网IP):** http://20.6.81.42:5173
+- **外网访问 (域名):** http://forsteri.southeastasia.cloudapp.azure.com:5173
 - **本地访问:** http://localhost:5173
-- **后端API:** http://forsteri.southeastasia.cloudapp.azure.com:3001
+- **后端API (公网IP):** http://20.6.81.42:3001
+- **后端API (域名):** http://forsteri.southeastasia.cloudapp.azure.com:3001
+
+**重要说明:**
+- 公网IP: `20.6.81.42` (从外网访问使用此IP)
+- 内网IP: `10.0.0.4` (Vite显示的Network地址，仅VM内部使用)
+- 域名会自动解析到公网IP `20.6.81.42`
 
 ### Azure 云服务器配置要求
 
@@ -104,18 +111,25 @@ pm2 startup
 
 #### 1. Host not allowed 错误
 如果遇到 "To allow this host, add to `server.allowedHosts`" 错误：
-- ✅ vite.config.ts 已配置 `host: true` (监听所有IP)
-- ✅ 移除了不支持的 --allowed-hosts 参数
-- 如果仍有问题，可以尝试：
-```bash
-# 简单启动命令
-npm run dev:azure
+- ✅ vite.config.ts 已配置 `allowedHosts: true` (允许所有主机)
+- ✅ 配置了 `host: '0.0.0.0'` (监听所有接口)
+- ✅ 移除了不支持的 CLI 参数
 
-# 或手动启动
-vite --host 0.0.0.0 --port 5173
+**重启Vite服务器:**
+```bash
+# 停止当前服务器 (Ctrl+C)
+# 然后重新启动
+npm run dev:azure
 ```
 
-**注意:** Vite的 `host: true` 配置会自动允许所有主机访问，包括Azure域名。
+**手动验证配置:**
+```bash
+# 检查配置文件
+cat vite.config.ts
+
+# 重新安装依赖 (如果需要)
+npm install
+```
 
 #### 2. 无法访问外网
 - 检查Azure安全组是否开放了端口5173和3001
