@@ -104,12 +104,18 @@ pm2 startup
 
 #### 1. Host not allowed 错误
 如果遇到 "To allow this host, add to `server.allowedHosts`" 错误：
-- ✅ 已在 vite.config.ts 中配置 allowedHosts
-- ✅ 启动脚本已包含 --allowed-hosts 参数
-- 如果仍有问题，手动启动：
+- ✅ vite.config.ts 已配置 `host: true` (监听所有IP)
+- ✅ 移除了不支持的 --allowed-hosts 参数
+- 如果仍有问题，可以尝试：
 ```bash
-npm run dev -- --host 0.0.0.0 --allowed-hosts forsteri.southeastasia.cloudapp.azure.com
+# 简单启动命令
+npm run dev:azure
+
+# 或手动启动
+vite --host 0.0.0.0 --port 5173
 ```
+
+**注意:** Vite的 `host: true` 配置会自动允许所有主机访问，包括Azure域名。
 
 #### 2. 无法访问外网
 - 检查Azure安全组是否开放了端口5173和3001

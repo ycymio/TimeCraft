@@ -54,8 +54,8 @@ sleep 3
 
 # Start frontend development server with external access
 echo "🚀 Starting frontend server on port $PORT..."
-echo "   Allowing host: forsteri.southeastasia.cloudapp.azure.com"
-npm run dev -- --host 0.0.0.0 --port $PORT --allowed-hosts forsteri.southeastasia.cloudapp.azure.com &
+echo "   Configured for host: forsteri.southeastasia.cloudapp.azure.com"
+npm run dev -- --host 0.0.0.0 --port $PORT &
 FRONTEND_PID=$!
 
 echo ""

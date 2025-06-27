@@ -50,8 +50,8 @@ REM Wait for backend to start
 timeout /t 3 /nobreak >nul
 
 echo 🚀 Starting frontend server on port %PORT%...
-echo    Allowing host: forsteri.southeastasia.cloudapp.azure.com
-start "TimeCraft Frontend (Azure)" cmd /k "npm run dev -- --host 0.0.0.0 --port %PORT% --allowed-hosts forsteri.southeastasia.cloudapp.azure.com"
+echo    Configured for host: forsteri.southeastasia.cloudapp.azure.com
+start "TimeCraft Frontend (Azure)" cmd /k "npm run dev -- --host 0.0.0.0 --port %PORT%"
 
 echo.
 echo ✅ TimeCraft is now running on Azure Cloud!

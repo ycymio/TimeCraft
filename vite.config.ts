@@ -5,33 +5,20 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0', // Allow external connections
+    host: true, // Listen on all local IPs (equivalent to 0.0.0.0)
     port: 5173,
     strictPort: true,
     open: false, // Don't auto-open browser in VM
     cors: true, // Enable CORS for cross-origin requests
-    allowedHosts: [
-      'localhost',
-      '127.0.0.1',
-      'forsteri.southeastasia.cloudapp.azure.com',
-      '.cloudapp.azure.com' // Allow all Azure cloudapp subdomains
-    ],
     hmr: {
-      port: 24678, // Use a different port for HMR to avoid conflicts
-      host: 'localhost'
+      port: 24678 // Use a different port for HMR to avoid conflicts
     }
   },
   preview: {
-    host: '0.0.0.0',
+    host: true, // Listen on all local IPs
     port: 4173,
     strictPort: true,
-    cors: true,
-    allowedHosts: [
-      'localhost',
-      '127.0.0.1',
-      'forsteri.southeastasia.cloudapp.azure.com',
-      '.cloudapp.azure.com'
-    ]
+    cors: true
   },
   base: './' // Use relative paths for assets
 })
