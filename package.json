@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "server": "node server.js",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
-    "dev:host": "vite --host 0.0.0.0"
+    "dev:host": "vite --host 0.0.0.0",
+    "dev:azure": "vite --host 0.0.0.0 --port 5173",
+    "start:azure": "concurrently \"npm run server\" \"npm run dev:azure\""
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
