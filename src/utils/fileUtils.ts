@@ -1,12 +1,11 @@
 import dayjs from 'dayjs';
 
-// Types matching what the app expects
+// Types for our local file-based application
 interface Activity {
   category: string;
   start?: string | any; // Can be string or dayjs object
   end?: string | any;   // Can be string or dayjs object
   details?: string;
-  duration?: number;
 }
 
 interface CategoryDef {
@@ -14,7 +13,7 @@ interface CategoryDef {
   color: string;
 }
 
-// CSV parser with proper handling of quoted fields and escape sequences
+// CSV parser with proper handling of quoted fields and escape sequences for local files
 function parseCSV(text: string): string[][] {
   const lines = text.split(/\r?\n/);
   return lines.map(line => {
@@ -53,7 +52,7 @@ function parseCSV(text: string): string[][] {
   }).filter(row => row.length > 0); // Skip empty rows
 }
 
-// Function to read activities from CSV
+// Function to read activities from local CSV file
 export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateStr?: string): Promise<Activity[]> {
   try {
     const fileHandle = await dirHandle.getFileHandle('activities.csv');
@@ -64,7 +63,7 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
     if (rows.length <= 1) return []; // Just header or empty
     
     const header = rows[0];
-    // 查找表头中的字段索引，使用新的格式: Category,Start,End,Details
+    // Find column indexes in header with format: Category,Start,End,Details
     const categoryIdx = header.findIndex(h => h === 'Category');
     const startIdx = header.findIndex(h => h === 'Start');
     const endIdx = header.findIndex(h => h === 'End');
@@ -90,7 +89,7 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
       const targetDate = dayjs(dateStr);
       activities = activities.filter(a => {
         if (!a.start) return false;
-        // Handle both ISO and YYYY/MM/DD HH:mm formats
+        // Handle different date formats
         const actDate = dayjs(a.start);
         return actDate.format('YYYY-MM-DD') === targetDate.format('YYYY-MM-DD');
       });
@@ -103,7 +102,7 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
   }
 }
 
-// Function to read categories from JSON
+// Function to read categories from local JSON file
 export async function readCategories(dirHandle: FileSystemDirectoryHandle): Promise<CategoryDef[]> {
   try {
     const fileHandle = await dirHandle.getFileHandle('categories.json');
@@ -116,7 +115,7 @@ export async function readCategories(dirHandle: FileSystemDirectoryHandle): Prom
   }
 }
 
-// Function to read todos from CSV
+// Function to read todos from local CSV file
 export async function readTodos(dirHandle: FileSystemDirectoryHandle): Promise<string[]> {
   try {
     const fileHandle = await dirHandle.getFileHandle('todos.csv');
@@ -136,7 +135,7 @@ export async function readTodos(dirHandle: FileSystemDirectoryHandle): Promise<s
   }
 }
 
-// Function to read ideas from CSV
+// Function to read ideas from local CSV file
 export async function readIdeas(dirHandle: FileSystemDirectoryHandle, dateStr?: string): Promise<any[]> {
   try {
     const fileHandle = await dirHandle.getFileHandle('daily_ideas.csv');
@@ -169,7 +168,7 @@ export async function readIdeas(dirHandle: FileSystemDirectoryHandle, dateStr?: 
   }
 }
 
-// Function to write new activity to CSV
+// Function to write new activity to local CSV file
 export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activity: Activity): Promise<boolean> {
   try {
     // Properly escape CSV fields
@@ -233,7 +232,7 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
         return date.format('YYYY/MM/DD HH:mm');
       }
       
-      // Fallback for string values that are already formatted
+      // Fallback for string values that are already in the correct format
       return dateValue;
     };
     
@@ -263,7 +262,7 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
   }
 }
 
-// Function to add a new idea to CSV
+// Function to add a new idea to local CSV file
 export async function saveIdea(dirHandle: FileSystemDirectoryHandle, dateStr: string, idea: string): Promise<boolean> {
   try {
     const fileHandle = await dirHandle.getFileHandle('daily_ideas.csv');
@@ -304,7 +303,7 @@ export async function saveIdea(dirHandle: FileSystemDirectoryHandle, dateStr: st
   }
 }
 
-// Function to add or remove todo
+// Function to add or remove todo in local file
 export async function saveTodos(dirHandle: FileSystemDirectoryHandle, todos: string[]): Promise<boolean> {
   try {
     const fileHandle = await dirHandle.getFileHandle('todos.csv');
@@ -326,7 +325,7 @@ export async function saveTodos(dirHandle: FileSystemDirectoryHandle, todos: str
   }
 }
 
-// Calculate summary data based on activities
+// Calculate summary data based on activities from local files
 export async function calculateSummary(dirHandle: FileSystemDirectoryHandle): Promise<any> {
   try {
     const activities = await readActivities(dirHandle);
@@ -341,7 +340,7 @@ export async function calculateSummary(dirHandle: FileSystemDirectoryHandle): Pr
     activities.forEach(activity => {
       if (!activity.start || !activity.end) return;
       
-      // Handle both string dates and dayjs objects
+      // Handle both string dates and dayjs objects for local file operations
       const start = typeof activity.start === 'string' 
         ? dayjs(activity.start) 
         : activity.start;
