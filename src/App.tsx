@@ -48,7 +48,7 @@ function roundToNearest5or10(dateStr: string) {
 function getDefaultDate(offsetMin = 0) {
   const now = dayjs();
   const rounded = now.second(0).millisecond(0).minute(Math.floor(now.minute() / 5) * 5 + offsetMin);
-  return rounded;
+  return rounded; // Return dayjs object for DateTimePicker compatibility
 }
 
 function getContrastYIQ(hexcolor: string) {
@@ -104,6 +104,98 @@ function getColorfulTextColor(hex: string) {
 }
 
 function App() {
+  // 保存目录句柄到IndexedDB
+  const saveDirHandle = async (dirHandle: FileSystemDirectoryHandle) => {
+    try {
+      // 请求持久访问权限
+      if ((await (dirHandle as any).queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        const permission = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
+        if (permission !== 'granted') {
+          console.error('无法获取持久访问权限');
+          return;
+        }
+      }
+      
+      // 打开IndexedDB数据库
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('TimeCraftDB', 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('dirHandles')) {
+            db.createObjectStore('dirHandles', { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      // 保存目录句柄
+      return new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction('dirHandles', 'readwrite');
+        const store = transaction.objectStore('dirHandles');
+        const request = store.put({ id: 'lastUsedDir', handle: dirHandle });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('保存目录句柄失败:', error);
+    }
+  };
+
+  // 从IndexedDB恢复目录句柄
+  const loadDirHandle = async (): Promise<FileSystemDirectoryHandle | null> => {
+    try {
+      // 打开IndexedDB数据库
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('TimeCraftDB', 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('dirHandles')) {
+            db.createObjectStore('dirHandles', { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      // 获取目录句柄
+      return new Promise<FileSystemDirectoryHandle | null>((resolve, reject) => {
+        const transaction = db.transaction('dirHandles', 'readonly');
+        const store = transaction.objectStore('dirHandles');
+        const request = store.get('lastUsedDir');
+        request.onsuccess = () => {
+          const dirHandle = request.result?.handle || null;
+          if (dirHandle) {
+            // 验证权限
+            (dirHandle as any).queryPermission({ mode: 'readwrite' })
+              .then((permission: string) => {
+                if (permission === 'granted') {
+                  resolve(dirHandle);
+                } else {
+                  // 如果没有权限，尝试请求权限
+                  (dirHandle as any).requestPermission({ mode: 'readwrite' })
+                    .then((newPermission: string) => {
+                      if (newPermission === 'granted') {
+                        resolve(dirHandle);
+                      } else {
+                        console.log('用户拒绝了持久访问权限');
+                        resolve(null);
+                      }
+                    });
+                }
+              });
+          } else {
+            resolve(null);
+          }
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error('加载目录句柄失败:', error);
+      return null;
+    }
+  };
+
   // Setup and state hooks
   const [selectedDir, setSelectedDir] = useState<FileSystemDirectoryHandle | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -133,12 +225,8 @@ function App() {
     });
     // 加载指定日期活动
     readActivities(selectedDir, viewDate.format('YYYY-MM-DD')).then(data => {
-      setActivities(data.map((a: any) => ({
-        start: a.Start || a.start,
-        end: a.End || a.end,
-        category: a.Category || a.category,
-        details: a.Details || a.details,
-      })));
+      // 确保使用正确的字段顺序: category, start, end, details
+      setActivities(data);
     });
   }, [viewDate, selectedDir]);
 
@@ -146,12 +234,8 @@ function App() {
     if (!selectedDir) return;
     // 加载本周所有活动用于统计，每次 viewDate 或新增活动变更时重新获取
     readActivities(selectedDir).then(data => {
-      setWeekActivities(data.map((a: any) => ({
-        start: a.Start || a.start,
-        end: a.End || a.end,
-        category: a.Category || a.category,
-        details: a.Details || a.details,
-      })));
+      // 确保使用正确的字段顺序: category, start, end, details
+      setWeekActivities(data);
     });
   }, [viewDate, activities, selectedDir]);
 
@@ -185,6 +269,35 @@ function App() {
         }
       });
   }, [viewDate, selectedDir]);
+
+  // 尝试加载上次使用的目录
+  useEffect(() => {
+    async function loadLastDir() {
+      if (!selectedDir) {
+        try {
+          // 尝试从IndexedDB加载上次使用的目录
+          const dirHandle = await loadDirHandle();
+          if (dirHandle) {
+            console.log('已恢复上次使用的目录');
+            setSelectedDir(dirHandle);
+          }
+        } catch (error) {
+          console.error('恢复目录失败:', error);
+        }
+      }
+    }
+    
+    loadLastDir();
+  }, []); // 仅在组件首次挂载时运行，不依赖于selectedDir
+
+  // 当目录变更时保存到IndexedDB
+  useEffect(() => {
+    if (selectedDir) {
+      saveDirHandle(selectedDir).catch(err => {
+        console.error('保存目录句柄失败:', err);
+      });
+    }
+  }, [selectedDir]);
 
   // Define all handler functions here
   // Toggle/delete todo via local files
@@ -241,6 +354,7 @@ function App() {
   async function saveActivityToServer(activity: Activity) {
     if (!selectedDir) return;
     try {
+      // 确保活动对象按照 Category,Start,End,Details 格式传递
       await saveActivity(selectedDir, activity);
       // 保存后刷新当前 viewDate 的活动
       const acts = await readActivities(selectedDir, viewDate.format('YYYY-MM-DD'));
@@ -271,8 +385,9 @@ function App() {
     }
     const newActivity: Activity = {
       category: newPeriod.category,
-      start: start.toISOString(),
-      end: end.toISOString(),
+      // Keep the original dayjs objects in the activity state
+      start: newPeriod.start,
+      end: newPeriod.end,
       details: newPeriod.details,
     };
     setActivities((prev) => [
@@ -281,7 +396,7 @@ function App() {
     ]);
     saveActivityToServer(newActivity);
     setNewPeriod({
-      start: newPeriod.end,
+      start: newPeriod.end, // Keep using the dayjs object
       end: getDefaultDate(),
       category: '',
       details: '',
@@ -291,43 +406,6 @@ function App() {
   // Conditional setup screen after all function definitions
   if (!selectedDir) {
     return <FolderSetup onDone={(dirHandle) => setSelectedDir(dirHandle)} />;
-  }
-
-  function handleAddPeriod() {
-    if (!newPeriod.start || !newPeriod.end || !newPeriod.category) return;
-    const start = dayjs(newPeriod.start);
-    const end = dayjs(newPeriod.end);
-    const duration = Math.max(0, end.diff(start, 'minute'));
-    if (duration <= 0) return;
-    // 检查 overlap
-    const overlap = activities.some(a => {
-      if (!a.start || !a.end) return false;
-      const aStart = dayjs(a.start);
-      const aEnd = dayjs(a.end);
-      // 只要有交集就算 overlap
-      return start.isBefore(aEnd) && end.isAfter(aStart);
-    });
-    if (overlap) {
-      alert('该时间段与已有活动重叠，请调整后再添加。');
-      return;
-    }
-    const newActivity: Activity = {
-      category: newPeriod.category,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      details: newPeriod.details,
-    };
-    setActivities((prev) => [
-      ...prev,
-      newActivity,
-    ]);
-    saveActivityToServer(newActivity);
-    setNewPeriod({
-      start: newPeriod.end,
-      end: getDefaultDate(),
-      category: '',
-      details: '',
-    });
   }
 
   // 计算 timeline 显示区间

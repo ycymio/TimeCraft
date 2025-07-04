@@ -3,8 +3,8 @@ import dayjs from 'dayjs';
 // Types matching what the app expects
 interface Activity {
   category: string;
-  start?: string;
-  end?: string;
+  start?: string | any; // Can be string or dayjs object
+  end?: string | any;   // Can be string or dayjs object
   details?: string;
   duration?: number;
 }
@@ -14,31 +14,43 @@ interface CategoryDef {
   color: string;
 }
 
-// CSV parser for simple files
+// CSV parser with proper handling of quoted fields and escape sequences
 function parseCSV(text: string): string[][] {
   const lines = text.split(/\r?\n/);
   return lines.map(line => {
-    // Handle quoted values with commas inside them
-    const result = [];
+    if (line.trim() === '') return [];
+    
+    const result: string[] = [];
     let currentField = "";
     let inQuotes = false;
     
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
+      const nextChar = i < line.length - 1 ? line[i + 1] : '';
       
       if (char === '"') {
-        inQuotes = !inQuotes;
+        if (inQuotes && nextChar === '"') {
+          // Handle escaped quotes (two double quotes in a row)
+          currentField += '"';
+          i++; // Skip the next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
       } else if (char === ',' && !inQuotes) {
+        // End of field
         result.push(currentField);
         currentField = "";
       } else {
+        // Regular character
         currentField += char;
       }
     }
     
+    // Add the last field
     result.push(currentField);
     return result;
-  });
+  }).filter(row => row.length > 0); // Skip empty rows
 }
 
 // Function to read activities from CSV
@@ -52,23 +64,33 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
     if (rows.length <= 1) return []; // Just header or empty
     
     const header = rows[0];
+    // 查找表头中的字段索引，使用新的格式: Category,Start,End,Details
+    const categoryIdx = header.findIndex(h => h === 'Category');
     const startIdx = header.findIndex(h => h === 'Start');
     const endIdx = header.findIndex(h => h === 'End');
-    const categoryIdx = header.findIndex(h => h === 'Category');
     const detailsIdx = header.findIndex(h => h === 'Details');
     
-    let activities = rows.slice(1).filter(row => row.length >= 3).map(row => ({
-      start: row[startIdx],
-      end: row[endIdx],
-      category: row[categoryIdx],
-      details: row[detailsIdx] || ''
-    }));
+    let activities = rows.slice(1).filter(row => row.length >= 3).map(row => {
+      const category = row[categoryIdx];
+      const startStr = row[startIdx];
+      const endStr = row[endIdx];
+      const details = row[detailsIdx] || '';
+      
+      // Return string dates as they are - they'll be parsed when needed
+      return {
+        category,
+        start: startStr,
+        end: endStr,
+        details
+      };
+    });
     
     // Filter by date if provided
     if (dateStr) {
       const targetDate = dayjs(dateStr);
       activities = activities.filter(a => {
         if (!a.start) return false;
+        // Handle both ISO and YYYY/MM/DD HH:mm formats
         const actDate = dayjs(a.start);
         return actDate.format('YYYY-MM-DD') === targetDate.format('YYYY-MM-DD');
       });
@@ -150,37 +172,90 @@ export async function readIdeas(dirHandle: FileSystemDirectoryHandle, dateStr?: 
 // Function to write new activity to CSV
 export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activity: Activity): Promise<boolean> {
   try {
-    const fileHandle = await dirHandle.getFileHandle('activities.csv');
-    // Need writable access
-    const writable = await fileHandle.createWritable({ keepExistingData: true });
+    // Properly escape CSV fields
+    const escapeCSV = (field: string = '') => {
+      // If field contains comma, newline or quote, wrap in quotes and escape any quotes
+      if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+        return `"${field.replace(/"/g, '""')}"`;
+      }
+      return field;
+    };
     
-    // First read existing content
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    
-    // Parse and check if header exists
-    const rows = text.split(/\r?\n/);
-    let newContent = text;
-    
-    if (rows.length === 0) {
-      // Create file with header
-      newContent = 'Start,End,Category,Details\n';
+    // Try to get existing file or create a new one
+    let fileHandle: FileSystemFileHandle;
+    try {
+      fileHandle = await dirHandle.getFileHandle('activities.csv');
+    } catch (error) {
+      // File doesn't exist, create it
+      fileHandle = await dirHandle.getFileHandle('activities.csv', { create: true });
     }
     
-    // Format the new row
-    const newRow = `${activity.start},${activity.end},${activity.category},${activity.details || ''}`;
+    // Read existing content to check header
+    let existingContent = '';
+    let needsHeader = false;
+    
+    try {
+      const file = await fileHandle.getFile();
+      existingContent = await file.text();
+      
+      // Check if header exists and is correct
+      const lines = existingContent.split(/\r?\n/);
+      if (lines.length === 0 || !lines[0].includes('Category') || 
+          !lines[0].includes('Start') || !lines[0].includes('End')) {
+        needsHeader = true;
+      }
+    } catch (error) {
+      // New file or can't read it
+      needsHeader = true;
+    }
+    
+    // Create writable for the file
+    const writable = await fileHandle.createWritable();
+    
+    // Create new content with proper header if needed
+    let newContent = '';
+    
+    if (needsHeader) {
+      newContent = 'Category,Start,End,Details\n';
+    } else {
+      newContent = existingContent;
+    }
+    
+    // Format the new row with proper CSV escaping
+    const formatDate = (dateValue?: any) => {
+      if (!dateValue) return '';
+      
+      // Handle both string dates and dayjs objects
+      const date = typeof dateValue === 'string' ? dayjs(dateValue) : dateValue;
+      
+      // Check if it's a valid dayjs object
+      if (date && typeof date.format === 'function') {
+        return date.format('YYYY/MM/DD HH:mm');
+      }
+      
+      // Fallback for string values that are already formatted
+      return dateValue;
+    };
+    
+    const newRow = `${escapeCSV(activity.category)},${escapeCSV(formatDate(activity.start))},${escapeCSV(formatDate(activity.end))},${escapeCSV(activity.details)}`;
     
     // Append new row (ensure proper line ending)
-    if (newContent.endsWith('\n')) {
+    if (newContent.endsWith('\n') || newContent === '') {
       newContent += newRow;
     } else {
       newContent += '\n' + newRow;
+    }
+    
+    // Add trailing newline
+    if (!newContent.endsWith('\n')) {
+      newContent += '\n';
     }
     
     // Write the updated content
     await writable.write(newContent);
     await writable.close();
     
+    console.log('Activity saved successfully');
     return true;
   } catch (error) {
     console.error('Error saving activity:', error);
@@ -266,8 +341,15 @@ export async function calculateSummary(dirHandle: FileSystemDirectoryHandle): Pr
     activities.forEach(activity => {
       if (!activity.start || !activity.end) return;
       
-      const start = dayjs(activity.start);
-      const end = dayjs(activity.end);
+      // Handle both string dates and dayjs objects
+      const start = typeof activity.start === 'string' 
+        ? dayjs(activity.start) 
+        : activity.start;
+      
+      const end = typeof activity.end === 'string' 
+        ? dayjs(activity.end) 
+        : activity.end;
+        
       const dayKey = start.format('YYYY-MM-DD');
       days.add(dayKey);
       
