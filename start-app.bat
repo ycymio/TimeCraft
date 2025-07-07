@@ -1,5 +1,5 @@
 @echo off
-REM TimeCraft Start Script - Runs both frontend and backend on Windows
+REM TimeCraft Start Script - Runs the frontend application on Windows
 
 title TimeCraft Application
 
@@ -13,11 +13,7 @@ if not exist "node_modules" (
     exit /b 1
 )
 
-echo 🚀 Starting backend server on port 3001...
-start "TimeCraft Backend" cmd /k "node server.js"
-
-REM Wait a moment for backend to start
-timeout /t 3 /nobreak >nul
+echo 🚀 Starting frontend server on port 5173...
 
 echo 🚀 Starting frontend development server on port 5173...
 start "TimeCraft Frontend" cmd /k "npm run dev"

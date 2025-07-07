@@ -63,7 +63,16 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
     if (rows.length <= 1) return []; // Just header or empty
     
     const header = rows[0];
-    // Find column indexes in header with format: Category,Start,End,Details
+    
+    // Validate header format - must contain all required columns
+    const requiredColumns = ['Start', 'End', 'Category', 'Details'];
+    const missingColumns = requiredColumns.filter(col => !header.includes(col));
+    
+    if (missingColumns.length > 0) {
+      throw new Error(`CSV file format is incorrect. Missing columns: ${missingColumns.join(', ')}. Expected format: Start,End,Category,Details`);
+    }
+    
+    // Find column indexes in header with format: Start,End,Category,Details
     const categoryIdx = header.findIndex(h => h === 'Category');
     const startIdx = header.findIndex(h => h === 'Start');
     const endIdx = header.findIndex(h => h === 'End');
@@ -97,6 +106,10 @@ export async function readActivities(dirHandle: FileSystemDirectoryHandle, dateS
     
     return activities;
   } catch (error) {
+    // Re-throw format validation errors so they can be caught by the caller
+    if (error instanceof Error && error.message.includes('format is incorrect')) {
+      throw error;
+    }
     console.error('Error reading activities:', error);
     return [];
   }
@@ -125,11 +138,22 @@ export async function readTodos(dirHandle: FileSystemDirectoryHandle): Promise<s
     const rows = parseCSV(text);
     if (rows.length <= 1) return []; // Just header or empty
     
+    const header = rows[0];
+    
+    // Validate header format - must contain Text column
+    if (!header.includes('Text')) {
+      throw new Error(`todos.csv file format is incorrect. Expected format: Text`);
+    }
+    
     // Skip header and get the first column (Text)
     return rows.slice(1)
       .filter(row => row.length > 0 && row[0].trim() !== '')
       .map(row => row[0]);
   } catch (error) {
+    // Re-throw format validation errors so they can be caught by the caller
+    if (error instanceof Error && error.message.includes('format is incorrect')) {
+      throw error;
+    }
     console.error('Error reading todos:', error);
     return [];
   }
@@ -146,6 +170,15 @@ export async function readIdeas(dirHandle: FileSystemDirectoryHandle, dateStr?: 
     if (rows.length <= 1) return []; // Just header or empty
     
     const header = rows[0];
+    
+    // Validate header format - must contain Date and Idea columns
+    const requiredColumns = ['Date', 'Idea'];
+    const missingColumns = requiredColumns.filter(col => !header.includes(col));
+    
+    if (missingColumns.length > 0) {
+      throw new Error(`daily_ideas.csv file format is incorrect. Missing columns: ${missingColumns.join(', ')}. Expected format: Date,Idea`);
+    }
+    
     const dateIdx = header.findIndex(h => h === 'Date');
     const ideaIdx = header.findIndex(h => h === 'Idea');
     
@@ -163,6 +196,10 @@ export async function readIdeas(dirHandle: FileSystemDirectoryHandle, dateStr?: 
     
     return ideas;
   } catch (error) {
+    // Re-throw format validation errors so they can be caught by the caller
+    if (error instanceof Error && error.message.includes('format is incorrect')) {
+      throw error;
+    }
     console.error('Error reading ideas:', error);
     return [];
   }
@@ -189,9 +226,10 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
       fileHandle = await dirHandle.getFileHandle('activities.csv', { create: true });
     }
     
-    // Read existing content to check header
+    // Read existing content to check header and determine column order
     let existingContent = '';
     let needsHeader = false;
+    let columnOrder = ['Start', 'End', 'Category', 'Details']; // Default order
     
     try {
       const file = await fileHandle.getFile();
@@ -199,9 +237,22 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
       
       // Check if header exists and is correct
       const lines = existingContent.split(/\r?\n/);
-      if (lines.length === 0 || !lines[0].includes('Category') || 
-          !lines[0].includes('Start') || !lines[0].includes('End')) {
+      if (lines.length === 0) {
         needsHeader = true;
+      } else {
+        const firstLine = lines[0];
+        const headerCols = parseCSV(firstLine)[0] || [];
+        
+        // Check if all required columns exist
+        const requiredColumns = ['Start', 'End', 'Category', 'Details'];
+        const missingColumns = requiredColumns.filter(col => !headerCols.includes(col));
+        
+        if (missingColumns.length > 0) {
+          needsHeader = true;
+        } else {
+          // Use existing column order
+          columnOrder = headerCols;
+        }
       }
     } catch (error) {
       // New file or can't read it
@@ -215,12 +266,13 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
     let newContent = '';
     
     if (needsHeader) {
-      newContent = 'Category,Start,End,Details\n';
+      newContent = 'Start,End,Category,Details\n';
+      columnOrder = ['Start', 'End', 'Category', 'Details']; // Use default order for new files
     } else {
       newContent = existingContent;
     }
     
-    // Format the new row with proper CSV escaping
+    // Format the new row with proper CSV escaping, respecting column order
     const formatDate = (dateValue?: any) => {
       if (!dateValue) return '';
       
@@ -236,7 +288,30 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
       return dateValue;
     };
     
-    const newRow = `${escapeCSV(activity.category)},${escapeCSV(formatDate(activity.start))},${escapeCSV(formatDate(activity.end))},${escapeCSV(activity.details)}`;
+    // Build row data based on existing column order
+    const rowData: string[] = [];
+    for (const columnName of columnOrder) {
+      switch (columnName) {
+        case 'Start':
+          rowData.push(escapeCSV(formatDate(activity.start)));
+          break;
+        case 'End':
+          rowData.push(escapeCSV(formatDate(activity.end)));
+          break;
+        case 'Category':
+          rowData.push(escapeCSV(activity.category));
+          break;
+        case 'Details':
+          rowData.push(escapeCSV(activity.details));
+          break;
+        default:
+          // Handle any additional columns that might exist
+          rowData.push('');
+          break;
+      }
+    }
+    
+    const newRow = rowData.join(',');
     
     // Append new row (ensure proper line ending)
     if (newContent.endsWith('\n') || newContent === '') {
@@ -265,31 +340,92 @@ export async function saveActivity(dirHandle: FileSystemDirectoryHandle, activit
 // Function to add a new idea to local CSV file
 export async function saveIdea(dirHandle: FileSystemDirectoryHandle, dateStr: string, idea: string): Promise<boolean> {
   try {
-    const fileHandle = await dirHandle.getFileHandle('daily_ideas.csv');
-    // Need writable access
-    const writable = await fileHandle.createWritable({ keepExistingData: true });
-    
-    // First read existing content
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    
-    // Parse and check if header exists
-    const rows = text.split(/\r?\n/);
-    let newContent = text;
-    
-    if (rows.length === 0 || !rows[0].includes('Date')) {
-      // Create file with header
-      newContent = 'Date,Idea\n';
+    // Try to get existing file or create a new one
+    let fileHandle: FileSystemFileHandle;
+    try {
+      fileHandle = await dirHandle.getFileHandle('daily_ideas.csv');
+    } catch (error) {
+      // File doesn't exist, create it
+      fileHandle = await dirHandle.getFileHandle('daily_ideas.csv', { create: true });
     }
     
-    // Format the new row
-    const newRow = `${dateStr},${idea.replace(/,/g, ';')}`;
+    // Read existing content to check header and determine column order
+    let existingContent = '';
+    let needsHeader = false;
+    let columnOrder = ['Date', 'Idea']; // Default order
+    
+    try {
+      const file = await fileHandle.getFile();
+      existingContent = await file.text();
+      
+      if (existingContent.trim()) {
+        const lines = existingContent.split(/\r?\n/);
+        if (lines.length > 0) {
+          const headerCols = parseCSV(lines[0])[0] || [];
+          
+          // Check if all required columns exist
+          const requiredColumns = ['Date', 'Idea'];
+          const missingColumns = requiredColumns.filter(col => !headerCols.includes(col));
+          
+          if (missingColumns.length > 0) {
+            needsHeader = true;
+          } else {
+            // Use existing column order
+            columnOrder = headerCols;
+          }
+        } else {
+          needsHeader = true;
+        }
+      } else {
+        needsHeader = true;
+      }
+    } catch (error) {
+      // New file or can't read it
+      needsHeader = true;
+    }
+    
+    // Create writable for the file
+    const writable = await fileHandle.createWritable();
+    
+    // Create new content with proper header if needed
+    let newContent = '';
+    
+    if (needsHeader) {
+      newContent = 'Date,Idea\n';
+      columnOrder = ['Date', 'Idea']; // Use default order for new files
+    } else {
+      newContent = existingContent;
+    }
+    
+    // Build row data based on existing column order
+    const rowData: string[] = [];
+    for (const columnName of columnOrder) {
+      switch (columnName) {
+        case 'Date':
+          rowData.push(dateStr);
+          break;
+        case 'Idea':
+          rowData.push(idea.replace(/,/g, ';')); // Simple comma replacement for ideas
+          break;
+        default:
+          // Handle any additional columns that might exist
+          rowData.push('');
+          break;
+      }
+    }
+    
+    const newRow = rowData.join(',');
     
     // Append new row (ensure proper line ending)
-    if (newContent.endsWith('\n')) {
+    if (newContent.endsWith('\n') || newContent === '') {
       newContent += newRow;
     } else {
       newContent += '\n' + newRow;
+    }
+    
+    // Add trailing newline
+    if (!newContent.endsWith('\n')) {
+      newContent += '\n';
     }
     
     // Write the updated content
@@ -390,4 +526,75 @@ export async function calculateSummary(dirHandle: FileSystemDirectoryHandle): Pr
       topCategory: '-'
     };
   }
+}
+
+// Function to validate all CSV file formats in the directory
+export async function validateDirectoryFiles(dirHandle: FileSystemDirectoryHandle): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  
+  try {
+    // Check activities.csv format by trying to read it
+    try {
+      await readActivities(dirHandle);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('format is incorrect')) {
+        errors.push(error.message);
+      }
+    }
+    
+    // Check todos.csv format by trying to read it
+    try {
+      await readTodos(dirHandle);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('format is incorrect')) {
+        errors.push(error.message);
+      }
+    }
+    
+    // Check daily_ideas.csv format by trying to read it
+    try {
+      await readIdeas(dirHandle);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('format is incorrect')) {
+        errors.push(error.message);
+      }
+    }
+    
+    // Check categories.json format
+    try {
+      const categoriesHandle = await dirHandle.getFileHandle('categories.json');
+      const file = await categoriesHandle.getFile();
+      const text = await file.text();
+      
+      if (text.trim()) {
+        try {
+          const categories = JSON.parse(text);
+          if (!Array.isArray(categories)) {
+            errors.push(`categories.json format is incorrect. Should be an array`);
+          } else {
+            // Check if each category has required fields
+            for (let i = 0; i < categories.length; i++) {
+              const cat = categories[i];
+              if (!cat.name || !cat.color) {
+                errors.push(`categories.json format is incorrect. Category ${i + 1} is missing name or color field`);
+                break;
+              }
+            }
+          }
+        } catch (parseError) {
+          errors.push(`categories.json format is incorrect. Not valid JSON format`);
+        }
+      }
+    } catch (error) {
+      // File doesn't exist, which is OK
+    }
+    
+  } catch (error) {
+    errors.push(`Unable to access folder: ${error}`);
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 }

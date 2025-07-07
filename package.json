@@ -8,11 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server.js",
-    "start": "concurrently \"npm run server\" \"npm run dev\"",
     "dev:host": "vite --host 0.0.0.0",
-    "dev:azure": "vite --host 0.0.0.0 --port 5173",
-    "start:azure": "concurrently \"npm run server\" \"npm run dev:azure\""
+    "dev:azure": "vite --host 0.0.0.0 --port 5173"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,10 +17,8 @@
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
     "@mui/x-date-pickers": "^8.5.2",
-    "body-parser": "^2.2.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
-    "express": "^5.1.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",
     "react-datepicker": "^8.4.0",

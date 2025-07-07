@@ -43,27 +43,21 @@ If you prefer to run commands manually:
    npm install
    ```
 
-2. **Start backend server:**
-   ```bash
-   node server.js
-   ```
-
-3. **Start frontend (in another terminal):**
+2. **Start the frontend application:**
    ```bash
    npm run dev
    ```
 
 ### Access the Application
 
-- **Frontend UI:** http://localhost:5173
-- **Backend API:** http://localhost:3001
+- **Application UI:** http://localhost:5173
 
 ### Application Features
 
 - Daily activity tracking
 - Categories: meetings, feature work, emails, discussions, etc.
 - Data visualization with charts
-- Excel file integration for data storage
+- Local file integration for data storage
 - Material-UI for modern interface
 
 ### Project Structure
@@ -73,7 +67,6 @@ TimeCraft/
 ├── src/                    # React frontend source
 ├── data/                   # CSV data files
 ├── public/                 # Static assets
-├── server.js              # Express backend server
 ├── package.json           # Dependencies
 ├── setup-vm.sh/.bat       # Setup scripts
 └── start-app.sh/.bat      # Application start scripts
@@ -83,7 +76,6 @@ TimeCraft/
 
 1. **Port already in use:**
    - Frontend (5173): Stop any other Vite dev servers
-   - Backend (3001): Stop any other Node.js applications
 
 2. **Dependencies issues:**
    - Delete `node_modules` folder

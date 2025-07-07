@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TimeCraft Start Script - Runs both frontend and backend
+# TimeCraft Start Script - Runs the frontend application
 
 echo "=== Starting TimeCraft Application ==="
 echo ""
@@ -8,8 +8,8 @@ echo ""
 # Function to kill background processes on script exit
 cleanup() {
     echo ""
-    echo "Stopping servers..."
-    kill $FRONTEND_PID $BACKEND_PID 2>/dev/null
+    echo "Stopping server..."
+    kill $FRONTEND_PID 2>/dev/null
     exit
 }
 
@@ -22,21 +22,13 @@ if [ ! -d "node_modules" ]; then
     exit 1
 fi
 
-# Start backend server
-echo "🚀 Starting backend server on port 3001..."
-node server.js &
-BACKEND_PID=$!
-
-# Wait a moment for backend to start
-sleep 2
-
 # Start frontend development server
 echo "🚀 Starting frontend development server on port 5173..."
 npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "✅ Both servers are starting up..."
+echo "✅ Server is starting up..."
 echo ""
 echo "🌐 Frontend: http://localhost:5173"
 echo "🔧 Backend API: http://localhost:3001"
