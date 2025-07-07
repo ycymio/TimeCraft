@@ -60,7 +60,7 @@ npm install -g pm2
 mkdir -p logs
 
 # 4. 启动应用
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # 5. 保存配置并设置开机自启
 pm2 save
@@ -87,16 +87,16 @@ pm2 logs timecraft-frontend
 pm2 logs timecraft-backend
 
 # 重启所有服务
-pm2 restart ecosystem.config.js
+pm2 restart ecosystem.config.cjs
 
 # 停止所有服务
-pm2 stop ecosystem.config.js
+pm2 stop ecosystem.config.cjs
 
 # 删除所有服务
-pm2 delete ecosystem.config.js
+pm2 delete ecosystem.config.cjs
 
 # 重新加载配置文件
-pm2 reload ecosystem.config.js
+pm2 reload ecosystem.config.cjs
 ```
 
 #### 高级管理命令
@@ -142,7 +142,7 @@ tail -f logs/backend-combined.log
 ### 项目架构说明
 
 #### PM2 生态系统配置
-项目使用 `ecosystem.config.js` 管理两个主要服务：
+项目使用 `ecosystem.config.cjs` 管理两个主要服务：
 
 1. **timecraft-frontend** (Vite 开发服务器)
    - 端口: 5173
@@ -159,7 +159,7 @@ tail -f logs/backend-combined.log
 #### 文件结构
 ```
 TimeCraft/
-├── ecosystem.config.js      # PM2 配置文件
+├── ecosystem.config.cjs     # PM2 配置文件
 ├── start-azure.bat          # Windows 一键部署
 ├── start-azure.sh           # Linux 一键部署
 ├── pm2-manage.bat           # Windows 管理工具
@@ -287,7 +287,7 @@ source ~/.bashrc
 pm2 status
 
 # 如果服务未运行
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # 重启特定服务
 pm2 restart timecraft-frontend
@@ -354,7 +354,7 @@ rm -rf node_modules package-lock.json
 npm install
 
 # 重启服务
-pm2 restart ecosystem.config.js
+pm2 restart ecosystem.config.cjs
 ```
 
 **权限问题:**
@@ -438,8 +438,8 @@ top           # CPU 使用
 
 ```bash
 # 停止并删除所有 PM2 进程
-pm2 stop ecosystem.config.js
-pm2 delete ecosystem.config.js
+pm2 stop ecosystem.config.cjs
+pm2 delete ecosystem.config.cjs
 
 # 清理依赖和缓存
 rm -rf node_modules package-lock.json
@@ -479,12 +479,12 @@ pm2 flush
 rm -f logs/*.log
 
 # 重启服务 (定期维护)
-pm2 restart ecosystem.config.js
+pm2 restart ecosystem.config.cjs
 
 # 更新应用代码 (如有更新)
 git pull origin main
 npm install
-pm2 restart ecosystem.config.js
+pm2 restart ecosystem.config.cjs
 ```
 
 #### 性能监控
@@ -504,7 +504,7 @@ top
 
 #### 备份重要配置
 建议定期备份以下文件：
-- `ecosystem.config.js` - PM2 配置
+- `ecosystem.config.cjs` - PM2 配置
 - `package.json` - 项目依赖
 - `vite.config.ts` - Vite 配置  
 - `server/server.js` - 后端配置
@@ -532,7 +532,7 @@ pm2 status
 pm2 logs
 
 # 重启服务
-pm2 restart ecosystem.config.js
+pm2 restart ecosystem.config.cjs
 ```
 
 ### 访问地址速查

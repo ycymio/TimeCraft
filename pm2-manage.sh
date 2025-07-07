@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# PM2 Management Script for TimeCraft
-
+# PM2 Management Script for TimeCra                             echo ""
+            echo "=== Starting All Services ==="
+            pm2 start ecosystem.config.cjsecho ""
+            echo "=== Stopping All Services ==="
+            pm2 stop ecosystem.config.cjs echo ""
+            echo "=== Restarting All Services ==="
+            pm2 restart ecosystem.config.cjs
 show_menu() {
     echo ""
     echo "=== TimeCraft PM2 Management ==="
@@ -47,22 +52,22 @@ while true; do
             ;;
         5)
             echo ""
-            echo "=== Restarting Services ==="
-            pm2 restart ecosystem.config.js
+            echo "=== Restarting All Services ==="
+            pm2 restart ecosystem.config.cjs
             echo "Services restarted."
             read -p "Press Enter to continue..."
             ;;
         6)
             echo ""
-            echo "=== Stopping Services ==="
-            pm2 stop ecosystem.config.js
+            echo "=== Stopping All Services ==="
+            pm2 stop ecosystem.config.cjs
             echo "Services stopped."
             read -p "Press Enter to continue..."
             ;;
         7)
             echo ""
-            echo "=== Starting Services ==="
-            pm2 start ecosystem.config.js
+            echo "=== Starting All Services ==="
+            pm2 start ecosystem.config.cjs
             echo "Services started."
             read -p "Press Enter to continue..."
             ;;
@@ -70,7 +75,7 @@ while true; do
             echo ""
             read -p "Are you sure you want to delete all PM2 services? (y/N): " confirm
             if [[ $confirm == [yY] ]]; then
-                pm2 delete ecosystem.config.js
+                pm2 delete ecosystem.config.cjs
                 echo "Services deleted."
             else
                 echo "Operation cancelled."

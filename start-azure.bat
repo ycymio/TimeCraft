@@ -1,6 +1,14 @@
 @echo off
 REM Azure Cloud Deployment Script for TimeCraft (Windows) - PM2 Version
-REM This script uses PM2 to manage TimeCraft processes for Azure cloud access
+REM This screcho � PM2 Management Commands:
+echo    pm2 status                     # Show running processes
+echo    pm2 logs                       # Show logs
+echo    pm2 logs timecraft-frontend    # Frontend logs only
+echo    pm2 logs timecraft-backend     # Backend logs only
+echo    pm2 restart ecosystem.config.cjs   # Restart all
+echo    pm2 stop ecosystem.config.cjs       # Stop all
+echo    pm2 delete ecosystem.config.cjs     # Delete all
+echo    pm2 monit                      # Real-time monitoringPM2 to manage TimeCraft processes for Azure cloud access
 
 title TimeCraft Azure Cloud - PM2
 
@@ -55,8 +63,8 @@ if not exist logs mkdir logs
 REM Stop existing PM2 processes (if any)
 echo.
 echo === Stopping existing PM2 processes ===
-pm2 stop ecosystem.config.js 2>nul
-pm2 delete ecosystem.config.js 2>nul
+pm2 stop ecosystem.config.cjs 2>nul
+pm2 delete ecosystem.config.cjs 2>nul
 
 REM Set environment variables
 set NODE_ENV=production
@@ -69,7 +77,7 @@ echo === Starting TimeCraft for Azure Cloud with PM2 ===
 echo.
 
 echo 🚀 Starting TimeCraft applications with PM2...
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 if %errorlevel% neq 0 (
     echo ❌ Failed to start with PM2
@@ -99,9 +107,9 @@ echo    pm2 status                     # Show running processes
 echo    pm2 logs                       # Show logs
 echo    pm2 logs timecraft-frontend    # Frontend logs only
 echo    pm2 logs timecraft-backend     # Backend logs only
-echo    pm2 restart ecosystem.config.js   # Restart all
-echo    pm2 stop ecosystem.config.js       # Stop all
-echo    pm2 delete ecosystem.config.js     # Delete all
+echo    pm2 restart ecosystem.config.cjs   # Restart all
+echo    pm2 stop ecosystem.config.cjs       # Stop all
+echo    pm2 delete ecosystem.config.cjs     # Delete all
 echo    pm2 monit                      # Real-time monitoring
 echo.
 echo PM2 is now managing your TimeCraft processes.

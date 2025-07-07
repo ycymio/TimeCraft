@@ -1,7 +1,13 @@
 @echo off
 REM PM2 Management Script for TimeCraft
 
-title TimeCraft PM2 Management
+title Tiecho.
+echecho.
+echecho.
+echo === Starting All Services ===
+pm2 start ecosystem.config.cjs== Stopping All Services ===
+pm2 stop ecosystem.config.cjs== Restarting All Services ===
+pm2 restart ecosystem.config.cjsraft PM2 Management
 
 :MENU
 echo.
@@ -61,24 +67,24 @@ goto MENU
 
 :RESTART
 echo.
-echo === Restarting Services ===
-pm2 restart ecosystem.config.js
+echo === Restarting All Services ===
+pm2 restart ecosystem.config.cjs
 echo Services restarted.
 pause
 goto MENU
 
 :STOP
 echo.
-echo === Stopping Services ===
-pm2 stop ecosystem.config.js
+echo === Stopping All Services ===
+pm2 stop ecosystem.config.cjs
 echo Services stopped.
 pause
 goto MENU
 
 :START
 echo.
-echo === Starting Services ===
-pm2 start ecosystem.config.js
+echo === Starting All Services ===
+pm2 start ecosystem.config.cjs
 echo Services started.
 pause
 goto MENU
@@ -88,7 +94,7 @@ echo.
 echo === Deleting Services ===
 set /p confirm=Are you sure you want to delete all PM2 services? (y/N): 
 if /i "%confirm%"=="y" (
-    pm2 delete ecosystem.config.js
+    pm2 delete ecosystem.config.cjs
     echo Services deleted.
 ) else (
     echo Operation cancelled.
