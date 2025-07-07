@@ -12,10 +12,10 @@ export default defineConfig({
     cors: true, // Enable CORS for cross-origin requests
     // Allow all hosts (most permissive setting)
     allowedHosts: true,
-    hmr: {
-      port: 24678, // Use a different port for HMR to avoid conflicts
-      host: 'localhost' // HMR should only bind to localhost
-    }
+    // Disable HMR for cloud deployments to avoid WebSocket connection issues
+    // HMR (Hot Module Replacement) attempts to connect to localhost:24678 
+    // which fails when accessing from external clients
+    hmr: false
   },
   preview: {
     host: '0.0.0.0', // Listen on all interfaces

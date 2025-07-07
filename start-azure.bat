@@ -69,7 +69,6 @@ REM Set environment variables
 set NODE_ENV=production
 set HOST=0.0.0.0
 set PORT=5173
-set BACKEND_PORT=3001
 
 echo.
 echo === Starting TimeCraft for Azure Cloud with PM2 ===

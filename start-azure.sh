@@ -45,7 +45,6 @@ pm2 delete ecosystem.config.cjs 2>/dev/null || true
 export NODE_ENV=production
 export HOST=0.0.0.0
 export PORT=5173
-export BACKEND_PORT=3001
 
 echo ""
 echo "=== Starting TimeCraft for Azure Cloud with PM2 ==="

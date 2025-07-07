@@ -241,7 +241,6 @@ az network nsg rule list --resource-group <资源组名> --nsg-name <网络安�
 export NODE_ENV=production
 export HOST=0.0.0.0
 export PORT=5173
-export BACKEND_PORT=3001
 
 # 应用配置
 source ~/.bashrc
@@ -335,11 +334,14 @@ chmod 755 logs/
 
 **WebSocket/HMR 错误:**
 ```
-Error: listen EADDRNOTAVAIL: address not available
+WebSocket connection to 'ws://localhost:24678/?token=xxx' failed
+[vite] failed to connect to websocket (Error: WebSocket closed without opened.)
 ```
-- ✅ HMR 已配置为仅绑定到 localhost
-- ✅ 公网访问不受影响
-- HMR (热模块替换) 仅在开发环境可用
+**解决方案:**
+- ✅ HMR 已在 `vite.config.ts` 中禁用（`hmr: false`）
+- ✅ 这个错误不影响应用功能，只是热重载功能不可用
+- ✅ 页面刷新仍然可以看到代码更改
+- **说明**: 云环境中浏览器无法连接到服务器的 localhost WebSocket
 
 **Host not allowed 错误:**
 ```
