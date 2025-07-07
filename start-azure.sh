@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Azure Cloud Deployment Script for TimeCraft
-# This script configures and starts TimeCraft for Azure cloud access
+# Azure Cloud Deployment Script for TimeCraft - PM2 Version
+# This script uses PM2 to manage TimeCraft processes for Azure cloud access
 
-echo "=== TimeCraft Azure Cloud Setup ==="
+echo "=== TimeCraft Azure Cloud Setup (PM2) ==="
 echo "Domain: forsteri.southeastasia.cloudapp.azure.com"
 echo ""
 
@@ -18,10 +18,28 @@ fi
 echo "✅ Node.js version: $(node --version)"
 echo "✅ npm version: $(npm --version)"
 
+# Check if PM2 is installed
+if ! command -v pm2 &> /dev/null; then
+    echo "❌ PM2 is not installed"
+    echo "Installing PM2..."
+    npm install -g pm2
+fi
+
+echo "✅ PM2 version: $(pm2 --version)"
+
 # Install dependencies
 echo ""
 echo "=== Installing Dependencies ==="
 npm install
+
+# Create logs directory
+mkdir -p logs
+
+# Stop existing PM2 processes (if any)
+echo ""
+echo "=== Stopping existing PM2 processes ==="
+pm2 stop ecosystem.config.js 2>/dev/null || true
+pm2 delete ecosystem.config.js 2>/dev/null || true
 
 # Set environment variables for production
 export NODE_ENV=production
@@ -30,36 +48,17 @@ export PORT=5173
 export BACKEND_PORT=3001
 
 echo ""
-echo "=== Starting TimeCraft for Azure Cloud ==="
+echo "=== Starting TimeCraft for Azure Cloud with PM2 ==="
 echo ""
 
-# Function to kill background processes on script exit
-cleanup() {
-    echo ""
-    echo "Stopping servers..."
-    kill $FRONTEND_PID $BACKEND_PID 2>/dev/null
-    exit
-}
+echo "🚀 Starting TimeCraft applications with PM2..."
+pm2 start ecosystem.config.js
 
-# Set up signal handlers
-trap cleanup SIGINT SIGTERM
-
-# Start backend server
-echo "🚀 Starting backend server on port $BACKEND_PORT..."
-node server.js &
-BACKEND_PID=$!
-
-# Wait a moment for backend to start
-sleep 3
-
-# Start frontend development server with external access
-echo "🚀 Starting frontend server on port $PORT..."
-echo "   Configured for host: forsteri.southeastasia.cloudapp.azure.com"
-npm run dev -- --host 0.0.0.0 --port $PORT &
-FRONTEND_PID=$!
+# Save PM2 configuration for auto-restart on reboot
+pm2 save
 
 echo ""
-echo "✅ TimeCraft is now running on Azure Cloud!"
+echo "✅ TimeCraft is now running on Azure Cloud with PM2!"
 echo ""
 echo "🌐 Access URLs:"
 echo "   External (Public IP): http://20.6.81.42:5173"
@@ -72,8 +71,16 @@ echo "🔧 Make sure Azure firewall allows ports 5173 and 3001"
 echo "🔧 Public IP: 20.6.81.42 | Internal IP: 10.0.0.4"
 echo "🔧 HMR (24678) runs on localhost only for development"
 echo ""
-echo "Press Ctrl+C to stop all servers"
+echo "📊 PM2 Management Commands:"
+echo "   pm2 status                    # Show running processes"
+echo "   pm2 logs                      # Show logs"
+echo "   pm2 logs timecraft-frontend   # Frontend logs only"
+echo "   pm2 logs timecraft-backend    # Backend logs only"
+echo "   pm2 restart ecosystem.config.js  # Restart all"
+echo "   pm2 stop ecosystem.config.js     # Stop all"
+echo "   pm2 delete ecosystem.config.js   # Delete all"
+echo "   pm2 monit                     # Real-time monitoring"
 echo ""
-
-# Wait for processes
-wait
+echo "PM2 is now managing your TimeCraft processes."
+echo "Use 'pm2 status' to check the status."
+echo ""

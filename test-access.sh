@@ -1,11 +1,20 @@
 #!/bin/bash
 
-# Quick Test Script for Azure Access
-echo "=== TimeCraft Azure Access Test ==="
+# Quick Test Script for Azure Access (PM2 Version)
+echo "=== TimeCraft Azure Access Test (PM2) ==="
 echo ""
 
-# Check if the application is running
-echo "1. Checking if ports are in use..."
+# Check if PM2 processes are running
+echo "1. Checking PM2 processes..."
+if command -v pm2 &> /dev/null; then
+    echo "PM2 Status:"
+    pm2 status | grep -E "(timecraft-frontend|timecraft-backend)" || echo "No TimeCraft processes found"
+else
+    echo "❌ PM2 is not installed"
+fi
+
+echo ""
+echo "2. Checking if ports are in use..."
 if netstat -tlnp 2>/dev/null | grep -q ":5173"; then
     echo "✅ Port 5173 is active"
 else
@@ -19,7 +28,7 @@ else
 fi
 
 echo ""
-echo "2. Testing local access..."
+echo "3. Testing local access..."
 if curl -s --connect-timeout 5 http://localhost:5173 > /dev/null; then
     echo "✅ Local access (localhost:5173) works"
 else
@@ -27,7 +36,7 @@ else
 fi
 
 echo ""
-echo "3. Testing public IP access..."
+echo "4. Testing public IP access..."
 if curl -s --connect-timeout 5 http://20.6.81.42:5173 > /dev/null; then
     echo "✅ Public IP access (20.6.81.42:5173) works"
 else
@@ -35,7 +44,7 @@ else
 fi
 
 echo ""
-echo "4. Testing domain access..."
+echo "5. Testing domain access..."
 if curl -s --connect-timeout 5 http://forsteri.southeastasia.cloudapp.azure.com:5173 > /dev/null; then
     echo "✅ Domain access works"
 else
@@ -43,7 +52,7 @@ else
 fi
 
 echo ""
-echo "5. Current Vite configuration:"
+echo "6. Current Vite configuration:"
 if [ -f "vite.config.ts" ]; then
     echo "allowedHosts setting:"
     grep -A 5 -B 5 "allowedHosts" vite.config.ts || echo "No allowedHosts found"
@@ -54,6 +63,7 @@ fi
 echo ""
 echo "=== Test Complete ==="
 echo "If any tests failed, check:"
-echo "1. Application is running (npm run start:azure)"
-echo "2. Azure firewall allows ports 5173 and 3001"
-echo "3. vite.config.ts has allowedHosts: true"
+echo "1. Application is running (./start-azure.sh or start-azure.bat)"
+echo "2. PM2 processes are active (pm2 status)"
+echo "3. Azure firewall allows ports 5173 and 3001"
+echo "4. vite.config.ts has allowedHosts: true"
