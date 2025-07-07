@@ -2,7 +2,6 @@ import './App.css';
 import { useEffect, useState } from 'react';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import TextField from '@mui/material/TextField';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -14,7 +13,7 @@ import { readActivities, readCategories, readIdeas, readTodos, saveActivity, sav
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
-// 修正 Activity 类型
+// Updated Activity type
 interface Activity {
   category: string;
   start?: string;
@@ -25,12 +24,6 @@ interface Activity {
 interface CategoryDef {
   name: string;
   color: string;
-}
-
-function formatMinutes(mins: number) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}h ${m}m`;
 }
 
 function roundToNearest5or10(dateStr: string) {
@@ -51,52 +44,39 @@ function getDefaultDate(offsetMin = 0) {
   return rounded; // Return dayjs object for DateTimePicker compatibility
 }
 
-function getContrastYIQ(hexcolor: string) {
-  // Remove # if present
-  hexcolor = hexcolor.replace('#', '');
-  if (hexcolor.length === 3) {
-    hexcolor = hexcolor.split('').map(x => x + x).join('');
-  }
-  const r = parseInt(hexcolor.substr(0,2),16);
-  const g = parseInt(hexcolor.substr(2,2),16);
-  const b = parseInt(hexcolor.substr(4,2),16);
-  const yiq = ((r*299)+(g*587)+(b*114))/1000;
-  return yiq >= 180 ? '#222' : '#fff';
-}
-
-// 生成淡色背景
+// Generate soft background color
 function getSoftColor(hex: string, alpha = 0.32) {
-  // 支持 #rgb/#rrggbb
+  // Support #rgb/#rrggbb format
   let c = hex.replace('#', '');
   if (c.length === 3) c = c.split('').map(x => x + x).join('');
   const r = parseInt(c.substring(0,2),16);
   const g = parseInt(c.substring(2,4),16);
   const b = parseInt(c.substring(4,6),16);
-  // 提高亮度（更淡）
+  // Increase brightness (lighter)
   const brighten = (v: number) => Math.min(255, Math.floor(220 + (v-128)*0.18));
   return `rgba(${brighten(r)},${brighten(g)},${brighten(b)},${alpha})`;
 }
-// 生成深色文字
+// Generate dark text color
 function getDarkColor(hex: string) {
   let c = hex.replace('#', '');
   if (c.length === 3) c = c.split('').map(x => x + x).join('');
   const r = parseInt(c.substring(0,2),16);
   const g = parseInt(c.substring(2,4),16);
   const b = parseInt(c.substring(4,6),16);
-  // 更深色（加深系数从0.28提升到0.18）
+  // Darker color (darken factor increased from 0.28 to 0.18)
   const darken = (v: number) => Math.max(0, Math.floor(v * 0.18));
   return `rgb(${darken(r)},${darken(g)},${darken(b)})`;
 }
 
-// 生成同色系但更深的彩色文字（加深系数更大）
+// Generate colorful text color in same tone but darker (larger darken factor)
 function getColorfulTextColor(hex: string) {
   let c = hex.replace('#', '');
   if (c.length === 3) c = c.split('').map(x => x + x).join('');
   let r = parseInt(c.substring(0,2),16);
   let g = parseInt(c.substring(2,4),16);
   let b = parseInt(c.substring(4,6),16);
-  // 降低亮度，提升饱和度，得到同色系更深彩色
-  const factor = 0.44; // 更深
+  // Reduce brightness, increase saturation for same-tone darker color
+  const factor = 0.44; // Darker
   r = Math.round(r * factor);
   g = Math.round(g * factor);
   b = Math.round(b * factor);
@@ -104,19 +84,19 @@ function getColorfulTextColor(hex: string) {
 }
 
 function App() {
-  // 保存目录句柄到IndexedDB
+  // Save directory handle to IndexedDB
   const saveDirHandle = async (dirHandle: FileSystemDirectoryHandle) => {
     try {
-      // 请求持久访问权限
+      // Request persistent access permission
       if ((await (dirHandle as any).queryPermission({ mode: 'readwrite' })) !== 'granted') {
         const permission = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
         if (permission !== 'granted') {
-          console.error('无法获取持久访问权限');
+          console.error('Unable to get persistent access permission');
           return;
         }
       }
       
-      // 打开IndexedDB数据库
+      // Open IndexedDB database
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('TimeCraftDB', 1);
         request.onupgradeneeded = () => {
@@ -129,7 +109,7 @@ function App() {
         request.onerror = () => reject(request.error);
       });
 
-      // 保存目录句柄
+      // Save directory handle
       return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction('dirHandles', 'readwrite');
         const store = transaction.objectStore('dirHandles');
@@ -138,14 +118,14 @@ function App() {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('保存目录句柄失败:', error);
+      console.error('Failed to save directory handle:', error);
     }
   };
 
-  // 从IndexedDB恢复目录句柄
+  // Restore directory handle from IndexedDB
   const loadDirHandle = async (): Promise<FileSystemDirectoryHandle | null> => {
     try {
-      // 打开IndexedDB数据库
+      // Open IndexedDB database
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('TimeCraftDB', 1);
         request.onupgradeneeded = () => {
@@ -158,7 +138,7 @@ function App() {
         request.onerror = () => reject(request.error);
       });
 
-      // 获取目录句柄
+      // Get directory handle
       return new Promise<FileSystemDirectoryHandle | null>((resolve, reject) => {
         const transaction = db.transaction('dirHandles', 'readonly');
         const store = transaction.objectStore('dirHandles');
@@ -166,19 +146,19 @@ function App() {
         request.onsuccess = () => {
           const dirHandle = request.result?.handle || null;
           if (dirHandle) {
-            // 验证权限
+            // Verify permissions
             (dirHandle as any).queryPermission({ mode: 'readwrite' })
               .then((permission: string) => {
                 if (permission === 'granted') {
                   resolve(dirHandle);
                 } else {
-                  // 如果没有权限，尝试请求权限
+                  // If no permission, try to request permission
                   (dirHandle as any).requestPermission({ mode: 'readwrite' })
                     .then((newPermission: string) => {
                       if (newPermission === 'granted') {
                         resolve(dirHandle);
                       } else {
-                        console.log('用户拒绝了持久访问权限');
+                        console.log('User denied persistent access permission');
                         resolve(null);
                       }
                     });
@@ -191,7 +171,7 @@ function App() {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('加载目录句柄失败:', error);
+      console.error('Failed to load directory handle:', error);
       return null;
     }
   };
@@ -223,18 +203,18 @@ function App() {
         end: prev.end || getDefaultDate(),
       }));
     });
-    // 加载指定日期活动
+    // Load activities for specified date
     readActivities(selectedDir, viewDate.format('YYYY-MM-DD')).then(data => {
-      // 确保使用正确的字段顺序: category, start, end, details
+      // Ensure correct field order is used: category, start, end, details
       setActivities(data);
     });
   }, [viewDate, selectedDir]);
 
   useEffect(() => {
     if (!selectedDir) return;
-    // 加载本周所有活动用于统计，每次 viewDate 或新增活动变更时重新获取
+    // Load all activities for this week for statistics, reload when viewDate or activities change
     readActivities(selectedDir).then(data => {
-      // 确保使用正确的字段顺序: category, start, end, details
+      // Ensure correct field order is used: category, start, end, details
       setWeekActivities(data);
     });
   }, [viewDate, activities, selectedDir]);
@@ -254,11 +234,11 @@ function App() {
     readTodos(selectedDir).then(setTodos);
   }, [selectedDir]);
 
-  // 页面加载时随机 pick 一条历史心得（非今日）
+  // Randomly pick a historical insight when page loads (not today's)
   useEffect(() => {
     if (!selectedDir) return;
     readIdeas(selectedDir).then(allIdeas => {
-      // 排除今日
+      // Exclude today
       const todayStr = viewDate.format('YYYY-MM-DD');
       const pastIdeas = allIdeas.filter((i: any) => i.Date !== todayStr);
       if (pastIdeas.length > 0) {
@@ -270,31 +250,31 @@ function App() {
       });
   }, [viewDate, selectedDir]);
 
-  // 尝试加载上次使用的目录
+  // Try to load last used directory
   useEffect(() => {
     async function loadLastDir() {
       if (!selectedDir) {
         try {
-          // 尝试从IndexedDB加载上次使用的目录
+          // Try to load last used directory from IndexedDB
           const dirHandle = await loadDirHandle();
           if (dirHandle) {
-            console.log('已恢复上次使用的目录');
+            console.log('Restored last used directory');
             setSelectedDir(dirHandle);
           }
         } catch (error) {
-          console.error('恢复目录失败:', error);
+          console.error('Failed to restore directory:', error);
         }
       }
     }
     
     loadLastDir();
-  }, []); // 仅在组件首次挂载时运行，不依赖于selectedDir
+  }, []); // Only run on component first mount, don't depend on selectedDir
 
-  // 当目录变更时保存到IndexedDB
+  // Save to IndexedDB when directory changes
   useEffect(() => {
     if (selectedDir) {
       saveDirHandle(selectedDir).catch(err => {
-        console.error('保存目录句柄失败:', err);
+        console.error('Failed to save directory handle:', err);
       });
     }
   }, [selectedDir]);
@@ -350,17 +330,17 @@ function App() {
     setNewPeriod((prev) => ({ ...prev, [name]: newValue }));
   }
 
-  // 新增后刷新当天活动
+  // Refresh today's activities after adding new one
   async function saveActivityToServer(activity: Activity) {
     if (!selectedDir) return;
     try {
-      // 确保活动对象按照 Category,Start,End,Details 格式传递
+      // Ensure activity object is passed in correct format
       await saveActivity(selectedDir, activity);
-      // 保存后刷新当前 viewDate 的活动
+      // Refresh activities for current viewDate after saving
       const acts = await readActivities(selectedDir, viewDate.format('YYYY-MM-DD'));
       setActivities(acts);
     } catch (e) {
-      // 可以在这里加toast或提示
+      // Can add toast or notification here
       console.error('Failed to save activity to file', e);
     }
   }
@@ -371,16 +351,16 @@ function App() {
     const end = dayjs(newPeriod.end);
     const duration = Math.max(0, end.diff(start, 'minute'));
     if (duration <= 0) return;
-    // 检查 overlap
+    // Check overlap
     const overlap = activities.some(a => {
       if (!a.start || !a.end) return false;
       const aStart = dayjs(a.start);
       const aEnd = dayjs(a.end);
-      // 只要有交集就算 overlap
+      // Any intersection counts as overlap
       return start.isBefore(aEnd) && end.isAfter(aStart);
     });
     if (overlap) {
-      alert('该时间段与已有活动重叠，请调整后再添加。');
+      alert('This time period overlaps with existing activities. Please adjust and try again.');
       return;
     }
     const newActivity: Activity = {
@@ -408,7 +388,7 @@ function App() {
     return <FolderSetup onDone={(dirHandle) => setSelectedDir(dirHandle)} />;
   }
 
-  // 计算 timeline 显示区间
+  // Calculate timeline display range
   const todayActs = activities.filter(a => {
     if (!a.start || !a.end) return false;
     const start = dayjs(a.start);
@@ -421,18 +401,18 @@ function App() {
     minHour = Math.min(minHour, minStart);
     maxHour = Math.max(maxHour, maxEnd);
   }
-  // 限制区间在0-24
+  // Limit range to 0-24
   minHour = Math.max(0, minHour);
   maxHour = Math.min(24, maxHour);
 
-  // 统计本周每个分类的时间汇总
-  // weekStart: 本周一 00:00，weekEnd: 本周日 23:59:59
+  // Calculate weekly time summary by category
+  // weekStart: Monday 00:00, weekEnd: Sunday 23:59:59
   // Calculate current week based on selected viewDate
-  const weekStart = viewDate.startOf('week').add(1, 'day'); // 周一 of viewDate week
-  const weekEnd = weekStart.add(6, 'day').endOf('day'); // 周日 23:59:59 of viewDate week
+  const weekStart = viewDate.startOf('week').add(1, 'day'); // Monday of viewDate week
+  const weekEnd = weekStart.add(6, 'day').endOf('day'); // Sunday 23:59:59 of viewDate week
   const weekActivitiesFiltered = weekActivities.filter(a => {
     if (!a.start || !a.end) return false;
-    // 明确用 dayjs(start, 'YYYY/MM/DD HH:mm') 解析
+    // Explicitly use dayjs(start, 'YYYY/MM/DD HH:mm') to parse
     const start = dayjs(a.start, 'YYYY/MM/DD HH:mm');
     return start.isSameOrAfter(weekStart) && start.isSameOrBefore(weekEnd);
   });
@@ -445,7 +425,7 @@ function App() {
     categoryTotals[a.category] += mins;
   });
 
-  // 计算今日 total time（不含 Free Time）
+  // Calculate today's total time (excluding Free Time)
   const todayTotalMinutes = todayActs
     .filter(a => a.category !== 'Free Time')
     .reduce((sum, a) => {
@@ -459,7 +439,21 @@ function App() {
   return (
     <>
       <header style={{ padding: '10px', textAlign: 'right' }}>
-        <button onClick={() => setSelectedDir(null)}>Change Folder</button>
+        <button 
+          onClick={() => setSelectedDir(null)}
+          style={{
+            border: '1.5px solid #d0d7de',
+            borderRadius: '6px',
+            padding: '0.5em 1em',
+            background: '#fff',
+            color: '#333',
+            cursor: 'pointer',
+            fontSize: '0.9em',
+            fontWeight: 500
+          }}
+        >
+          Change Folder
+        </button>
       </header>
       <div className="main-layout">
         <div className="left-column">
@@ -520,8 +514,8 @@ function App() {
                       key={cat.name}
                       value={cat.name}
                       style={{
-                        background: getSoftColor(cat.color), // 时间轴同款淡色背景
-                        color: getColorfulTextColor(cat.color), // 时间轴同款深色文字
+                        background: getSoftColor(cat.color), // Timeline style soft background color
+                        color: getColorfulTextColor(cat.color), // Timeline style dark text color
                         fontWeight: 'normal'
                       }}
                     >
@@ -658,25 +652,25 @@ function App() {
             </button>
             <span style={{ fontSize: '0.75em', color: '#888', fontWeight: 400, whiteSpace: 'nowrap', alignSelf: 'flex-end' }}>
               {todayTotalHours} hours
-            </span>
-          </div>
-          <div className="timeline-container">
-            {/* 时间刻度 */}
-            <div className="timeline-ticks">
-              {Array.from({ length: maxHour - minHour + 1 }).map((_, i) => {
-                const h = minHour + i;
-                return (
-                  <div
-                    key={h}
-                    className="timeline-tick-label"
-                    style={{ top: `${((h - minHour) / (maxHour - minHour)) * 100}%` }}
-                  >
-                    {h.toString().padStart(2, '0')}:00
-                  </div>
-                );
-              })}
-            </div>
-            {/* 无竖线/横线，活动块紧贴时间刻度 */}
+            </span>            </div>
+            {/* Timeline container */}
+            <div className="timeline-container">
+              {/* Time scale ticks */}
+              <div className="timeline-ticks">
+                {Array.from({ length: maxHour - minHour + 1 }).map((_, i) => {
+                  const h = minHour + i;
+                  return (
+                    <div
+                      key={h}
+                      className="timeline-tick-label"
+                      style={{ top: `${((h - minHour) / (maxHour - minHour)) * 100}%` }}
+                    >
+                      {h.toString().padStart(2, '0')}:00
+                    </div>
+                  );
+                })}
+              </div>
+              {/* No vertical/horizontal lines, activity blocks close to time ticks */}
             {todayActs.map((a, idx) => {
               const start = dayjs(a.start);
               const end = dayjs(a.end);
@@ -685,13 +679,16 @@ function App() {
               const totalMinutes = (maxHour - minHour) * 60;
               const topPct = (startMin / totalMinutes) * 100;
               const heightPct = Math.max(2, (endMin - startMin) / totalMinutes * 100);
+              
               const catColor = categories.find(c => c.name === a.category)?.color || '#bbb';
               const bgColor = getSoftColor(catColor);
               const textColor = getDarkColor(catColor);
-              // 动态padding：高度很小时减小padding
+              
+              // Dynamic padding: reduce padding when height is very small
               let dynamicPadding = '0.25em 0.8em';
               if (heightPct < 7) dynamicPadding = '0em 0.8em';
               else if (heightPct < 12) dynamicPadding = '0.15em 0.8em';
+              
               return (
                 <div
                   key={idx}
@@ -707,7 +704,7 @@ function App() {
                     background: bgColor,
                     color: textColor,
                   }}
-                  title={`${start.format('HH:mm')} - ${end.format('HH:mm')}\n${a.category}${a.details ? '：' + a.details : ''}`}
+                  title={`${start.format('HH:mm')} - ${end.format('HH:mm')}\n${a.category}${a.details ? ': ' + a.details : ''}`}
                 >
                   <span
                     className="timeline-activity-label"
@@ -726,11 +723,11 @@ function App() {
                       style={{
                         color: getColorfulTextColor(catColor),
                         fontSize: '0.78em',
-                        whiteSpace: 'normal', // 允许自动换行
+                        whiteSpace: 'normal', // Allow automatic line wrapping
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         display: 'block',
-                        fontStyle: 'italic', // 斜体
+                        fontStyle: 'italic', // Italic
                       }}
                     >{a.details}</span>
                   )}
@@ -752,7 +749,7 @@ function App() {
                 </li>
               ))}
             </ul>
-            {/* 饼图展示本周分类占比 */}
+            {/* Pie chart showing weekly category distribution */}
             <div className="weekly-pie-chart" style={{margin:'1.2em auto 0 auto',width:'fit-content',minHeight: '190px'}}>
               {Object.values(categoryTotals).reduce((a,b)=>a+b,0) > 0 ? (
                 <SimplePieChart
