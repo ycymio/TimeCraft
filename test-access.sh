@@ -8,7 +8,7 @@ echo ""
 echo "1. Checking PM2 processes..."
 if command -v pm2 &> /dev/null; then
     echo "PM2 Status:"
-    pm2 status | grep -E "(timecraft-frontend|timecraft-backend)" || echo "No TimeCraft processes found"
+    pm2 status | grep -E "timecraft-frontend" || echo "No TimeCraft processes found"
 else
     echo "❌ PM2 is not installed"
 fi
@@ -19,12 +19,6 @@ if netstat -tlnp 2>/dev/null | grep -q ":5173"; then
     echo "✅ Port 5173 is active"
 else
     echo "❌ Port 5173 is not active - start the application first"
-fi
-
-if netstat -tlnp 2>/dev/null | grep -q ":3001"; then
-    echo "✅ Port 3001 is active"
-else
-    echo "❌ Port 3001 is not active - start the backend first"
 fi
 
 echo ""
@@ -65,5 +59,5 @@ echo "=== Test Complete ==="
 echo "If any tests failed, check:"
 echo "1. Application is running (./start-azure.sh or start-azure.bat)"
 echo "2. PM2 processes are active (pm2 status)"
-echo "3. Azure firewall allows ports 5173 and 3001"
+echo "3. Azure firewall allows port 5173"
 echo "4. vite.config.ts has allowedHosts: true"

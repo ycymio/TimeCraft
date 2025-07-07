@@ -83,9 +83,6 @@ pm2 logs
 # 查看前端日志
 pm2 logs timecraft-frontend
 
-# 查看后端日志  
-pm2 logs timecraft-backend
-
 # 重启所有服务
 pm2 restart ecosystem.config.cjs
 
@@ -106,7 +103,6 @@ pm2 monit
 
 # 查看详细信息
 pm2 describe timecraft-frontend
-pm2 describe timecraft-backend
 
 # 查看最近日志 (指定行数)
 pm2 logs --lines 100
@@ -130,31 +126,21 @@ ls -la logs/
 # logs/frontend-combined.log    # 前端完整日志
 # logs/frontend-err.log         # 前端错误日志  
 # logs/frontend-out.log         # 前端输出日志
-# logs/backend-combined.log     # 后端完整日志
-# logs/backend-err.log          # 后端错误日志
-# logs/backend-out.log          # 后端输出日志
 
 # 实时监控特定日志文件
 tail -f logs/frontend-combined.log
-tail -f logs/backend-combined.log
 ```
 
 ### 项目架构说明
 
 #### PM2 生态系统配置
-项目使用 `ecosystem.config.cjs` 管理两个主要服务：
+项目使用 `ecosystem.config.cjs` 管理前端服务：
 
 1. **timecraft-frontend** (Vite 开发服务器)
    - 端口: 5173
    - 入口: `npm run dev`
    - 绑定: 0.0.0.0 (支持外网访问)
    - 日志: logs/frontend-*.log
-
-2. **timecraft-backend** (Express API 服务器)
-   - 端口: 3001
-   - 入口: server/server.js
-   - 支持 CORS 跨域
-   - 日志: logs/backend-*.log
 
 #### 文件结构
 ```
@@ -166,9 +152,9 @@ TimeCraft/
 ├── pm2-manage.sh            # Linux 管理工具
 ├── test-access.sh           # 访问测试脚本
 ├── logs/                    # PM2 日志目录
-├── server/
-│   └── server.js           # Express 后端服务器
 ├── src/                    # React 前端源码
+├── data/                   # 数据文件
+├── public/                 # 静态资源
 └── package.json           # 项目配置
 ```
 
@@ -178,11 +164,6 @@ TimeCraft/
 - **外网访问 (域名):** http://forsteri.southeastasia.cloudapp.azure.com:5173
 - **外网访问 (公网IP):** http://20.6.81.42:5173
 - **本地访问:** http://localhost:5173
-
-#### 后端 API (Express服务器)
-- **外网访问 (域名):** http://forsteri.southeastasia.cloudapp.azure.com:3001
-- **外网访问 (公网IP):** http://20.6.81.42:3001
-- **本地访问:** http://localhost:3001
 
 #### 网络说明
 - **公网IP:** `20.6.81.42` (从外网访问使用此IP)
@@ -211,19 +192,12 @@ chmod +x test-access.sh
 操作: Allow
 优先级: 1000
 
-规则名称: TimeCraft-Backend  
-端口: 3001
-协议: TCP
-源: Any (0.0.0.0/0)
-操作: Allow
-优先级: 1010
-
 规则名称: SSH-Access (可选)
 端口: 22
 协议: TCP
 源: Any (0.0.0.0/0)
 操作: Allow
-优先级: 1020
+优先级: 1010
 ```
 
 **注意:** 
@@ -237,9 +211,6 @@ chmod +x test-access.sh
 ```bash
 # 开放前端端口 5173
 az vm open-port --resource-group <资源组名> --name <虚拟机名> --port 5173 --priority 1000
-
-# 开放后端端口 3001  
-az vm open-port --resource-group <资源组名> --name <虚拟机名> --port 3001 --priority 1010
 
 # 查看现有规则
 az network nsg rule list --resource-group <资源组名> --nsg-name <网络安全组名> --output table
@@ -291,16 +262,13 @@ pm2 start ecosystem.config.cjs
 
 # 重启特定服务
 pm2 restart timecraft-frontend
-pm2 restart timecraft-backend
 
 # 查看服务详细信息
 pm2 describe timecraft-frontend
-pm2 describe timecraft-backend
 
 # 查看实时日志
 pm2 logs --lines 50
 pm2 logs timecraft-frontend --lines 30
-pm2 logs timecraft-backend --lines 30
 ```
 
 #### 2. 网络连接问题
@@ -309,15 +277,12 @@ pm2 logs timecraft-backend --lines 30
 ```bash
 # 检查端口是否被监听
 netstat -tulpn | grep :5173
-netstat -tulpn | grep :3001
 
 # 或使用 ss 命令
 ss -tulpn | grep :5173
-ss -tulpn | grep :3001
 
 # 测试本地连接
 curl http://localhost:5173
-curl http://localhost:3001/health
 ```
 
 **检查外网访问:**
@@ -328,7 +293,6 @@ ping forsteri.southeastasia.cloudapp.azure.com
 
 # 测试外网连接 (从VM内部)
 curl http://forsteri.southeastasia.cloudapp.azure.com:5173
-curl http://forsteri.southeastasia.cloudapp.azure.com:3001
 ```
 
 #### 3. 常见错误解决
@@ -337,14 +301,12 @@ curl http://forsteri.southeastasia.cloudapp.azure.com:3001
 ```bash
 # 查找占用端口的进程
 lsof -i :5173
-lsof -i :3001
 
 # 杀死占用进程 (谨慎使用)
 sudo kill -9 <PID>
 
 # 或停止 PM2 中的相应服务
 pm2 stop timecraft-frontend
-pm2 stop timecraft-backend
 ```
 
 **依赖问题:**
@@ -388,29 +350,11 @@ Invalid Host header / Host not allowed
 - 如仍有问题，重启 PM2 服务
 
 **CORS 跨域错误:**
-- ✅ 后端已配置 CORS 允许所有来源
-- ✅ Vite 代理配置正确
+- ✅ 前端应用读取本地数据文件
+- ✅ 无需后端 API 支持
 - 检查浏览器控制台错误详情
 
-#### 5. 后端/API 问题
-
-**API 无法访问:**
-```bash
-# 检查后端健康状态
-curl http://localhost:3001/health
-
-# 检查后端日志
-pm2 logs timecraft-backend
-
-# 重启后端服务
-pm2 restart timecraft-backend
-```
-
-**数据文件问题:**
-```bash
-# 检查数据文件是否存在
-ls -la data/
-ls -la public/
+#### 5. 数据文件问题
 
 # 检查文件权限
 chmod 644 data/*.csv data/*.json
@@ -430,7 +374,7 @@ top           # CPU 使用
 **防火墙/安全组问题:**
 - 确认 Azure NSG 规则正确配置
 - 检查 VM 内部防火墙设置 (ufw, iptables)
-- 验证端口 5173 和 3001 已开放
+- 验证端口 5173 已开放
 
 #### 7. 完整重新部署
 
@@ -460,14 +404,12 @@ pm2 logs
 
 # 监控特定服务日志
 pm2 logs timecraft-frontend
-pm2 logs timecraft-backend
 
 # 查看历史日志 (指定行数)
 pm2 logs --lines 200
 
 # 监控系统日志文件
 tail -f logs/frontend-combined.log
-tail -f logs/backend-combined.log
 ```
 
 #### 定期维护
@@ -494,7 +436,6 @@ pm2 monit
 
 # 查看进程详细信息
 pm2 describe timecraft-frontend
-pm2 describe timecraft-backend
 
 # 系统资源监控
 htop
@@ -507,7 +448,6 @@ top
 - `ecosystem.config.cjs` - PM2 配置
 - `package.json` - 项目依赖
 - `vite.config.ts` - Vite 配置  
-- `server/server.js` - 后端配置
 - `data/` 目录 - 数据文件
 
 ---
@@ -537,9 +477,7 @@ pm2 restart ecosystem.config.cjs
 
 ### 访问地址速查
 - **前端:** http://forsteri.southeastasia.cloudapp.azure.com:5173
-- **后端:** http://forsteri.southeastasia.cloudapp.azure.com:3001
 - **本地前端:** http://localhost:5173
-- **本地后端:** http://localhost:3001
 
 ### 技术支持
 如遇到问题，请提供以下信息：

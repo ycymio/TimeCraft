@@ -4,7 +4,6 @@ REM This screcho � PM2 Management Commands:
 echo    pm2 status                     # Show running processes
 echo    pm2 logs                       # Show logs
 echo    pm2 logs timecraft-frontend    # Frontend logs only
-echo    pm2 logs timecraft-backend     # Backend logs only
 echo    pm2 restart ecosystem.config.cjs   # Restart all
 echo    pm2 stop ecosystem.config.cjs       # Stop all
 echo    pm2 delete ecosystem.config.cjs     # Delete all
@@ -95,10 +94,8 @@ echo 🌐 Access URLs:
 echo    External (Public IP): http://20.6.81.42:5173
 echo    External (Domain): http://forsteri.southeastasia.cloudapp.azure.com:5173
 echo    Local: http://localhost:5173
-echo    Backend (Public IP): http://20.6.81.42:3001
-echo    Backend (Domain): http://forsteri.southeastasia.cloudapp.azure.com:3001
 echo.
-echo 🔧 Make sure Azure firewall allows ports 5173 and 3001
+echo 🔧 Make sure Azure firewall allows port 5173
 echo 🔧 Public IP: 20.6.81.42 ^| Internal IP: 10.0.0.4
 echo 🔧 HMR (24678) runs on localhost only for development
 echo.
