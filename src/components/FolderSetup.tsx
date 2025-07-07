@@ -38,8 +38,24 @@ export const FolderSetup: React.FC<FolderSetupProps> = ({ onDone }) => {
       
       // All checks passed
       onDone(dirHandle);
-    } catch {
-      setError('Folder selection canceled or not supported');
+    } catch (error) {
+      console.error('Folder selection error:', error);
+      console.log('Error type:', typeof error);
+      console.log('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.log('Error message:', error instanceof Error ? error.message : String(error));
+      
+      // Check if it's a user cancellation or an actual error
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setError('Folder selection was canceled');
+        } else if (error.name === 'NotSupportedError') {
+          setError('File System Access API is not supported in this browser. Please use Chrome, Edge, or another compatible browser.');
+        } else {
+          setError(`Error: ${error.message}`);
+        }
+      } else {
+        setError('Folder selection canceled or not supported');
+      }
     }
   };
 
