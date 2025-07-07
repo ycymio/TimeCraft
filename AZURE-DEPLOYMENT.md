@@ -20,9 +20,30 @@ chmod +x start-azure.sh
 - 自动安装项目依赖
 - 自动停止旧的 PM2 进程
 - 创建日志目录
-- 启动前端和后端服务
+- 启动前端服务
 - 配置 PM2 开机自启
 - 显示管理指令
+
+### ⚠️ File System Access API 兼容性说明
+
+TimeCraft 使用 File System Access API 来读取本地数据文件。该 API 有特定的兼容性要求：
+
+#### 兼容性要求
+1. **浏览器支持**: 仅支持 Chromium 内核浏览器 (Chrome 86+, Edge 86+, Opera 72+)
+2. **协议要求**: 必须在 **HTTPS** 环境下运行
+3. **安全上下文**: 必须在安全上下文中运行
+
+#### 本地 vs 云端差异
+- **本地开发**: `http://localhost:5173` - localhost 被认为是安全上下文 ✅
+- **云端部署**: `http://forsteri.southeastasia.cloudapp.azure.com:5173` - HTTP 协议不是安全上下文 ❌
+
+#### 错误表现
+如果在 HTTP 环境下访问，会出现以下错误：
+```
+TypeError: window.showDirectoryPicker is not a function
+```
+
+**解决方案请参考下方的 "HTTPS 配置" 章节。**
 
 ### PM2 管理工具
 
@@ -458,8 +479,11 @@ top
 
 ### 常用命令速查
 ```bash
-# 一键部署
+# 一键部署 (HTTP)
 ./start-azure.sh
+
+# 一键部署 (HTTPS) - 解决 File System Access API 问题
+./start-azure-https.sh
 
 # 管理工具
 ./pm2-manage.sh
@@ -478,8 +502,11 @@ pm2 restart ecosystem.config.cjs
 ```
 
 ### 访问地址速查
-- **前端:** http://forsteri.southeastasia.cloudapp.azure.com:5173
+- **HTTPS (推荐):** https://forsteri.southeastasia.cloudapp.azure.com:5173
+- **HTTP:** http://forsteri.southeastasia.cloudapp.azure.com:5173
 - **本地前端:** http://localhost:5173
+
+**注意:** File System Access API 需要 HTTPS 环境，建议使用 HTTPS 访问。
 
 ### 技术支持
 如遇到问题，请提供以下信息：
@@ -491,3 +518,246 @@ pm2 restart ecosystem.config.cjs
 ---
 
 **注意:** 确保 Azure VM 有足够的资源 (CPU/内存) 来运行 Node.js 应用程序。建议配置：2核心CPU，4GB内存，20GB存储空间。
+
+---
+
+## HTTPS 配置 (解决 File System Access API 问题)
+
+### 问题说明
+File System Access API 要求 HTTPS 环境，HTTP 协议下会出现 `window.showDirectoryPicker is not a function` 错误。
+
+### 解决方案
+
+#### 方案1: 使用 Nginx 反向代理 + Let's Encrypt (推荐)
+
+**1. 安装 Nginx:**
+```bash
+sudo apt update
+sudo apt install nginx
+```
+
+**2. 安装 Certbot:**
+```bash
+sudo apt install certbot python3-certbot-nginx
+```
+
+**3. 配置 Nginx:**
+```bash
+sudo nano /etc/nginx/sites-available/timecraft
+```
+
+添加以下内容：
+```nginx
+server {
+    listen 80;
+    server_name forsteri.southeastasia.cloudapp.azure.com;
+    
+    location / {
+        proxy_pass http://localhost:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+}
+```
+
+**4. 启用站点:**
+```bash
+sudo ln -s /etc/nginx/sites-available/timecraft /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+**5. 获取 SSL 证书:**
+```bash
+sudo certbot --nginx -d forsteri.southeastasia.cloudapp.azure.com
+```
+
+**6. 更新 Azure 安全组:**
+```bash
+# 开放 HTTPS 端口
+az vm open-port --resource-group <资源组名> --name <虚拟机名> --port 443 --priority 900
+az vm open-port --resource-group <资源组名> --name <虚拟机名> --port 80 --priority 901
+```
+
+#### 方案2: 使用自签名证书 (开发/测试)
+
+**1. 生成自签名证书:**
+```bash
+mkdir -p ssl
+openssl req -x509 -newkey rsa:2048 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+  -subj "/CN=forsteri.southeastasia.cloudapp.azure.com"
+```
+
+**2. 安装 @types/node (用于 vite.config.ts):**
+```bash
+npm install --save-dev @types/node
+```
+
+**3. 更新 vite.config.ts:**
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    open: false,
+    cors: true,
+    allowedHosts: true,
+    hmr: false, // Disable HMR for cloud deployment
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'ssl/key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'ssl/cert.pem')),
+    }
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    strictPort: true,
+    cors: true,
+    allowedHosts: true,
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'ssl/key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'ssl/cert.pem')),
+    }
+  },
+  base: './'
+})
+```
+
+**4. 更新启动脚本:**
+
+在 `start-azure.sh` 中添加证书生成：
+```bash
+# 在启动前检查并生成 SSL 证书
+if [ ! -f "ssl/cert.pem" ]; then
+    echo "Creating self-signed SSL certificate..."
+    mkdir -p ssl
+    openssl req -x509 -newkey rsa:2048 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+      -subj "/CN=forsteri.southeastasia.cloudapp.azure.com"
+    echo "SSL certificate created."
+fi
+```
+
+#### 方案3: 一键 HTTPS 部署脚本
+
+创建 `start-azure-https.sh`:
+```bash
+#!/bin/bash
+
+echo "=== TimeCraft HTTPS Setup ==="
+
+# 1. Install @types/node
+echo "Installing @types/node..."
+npm install --save-dev @types/node
+
+# 2. Create SSL directory and certificate
+echo "Creating SSL certificate..."
+mkdir -p ssl
+if [ ! -f "ssl/cert.pem" ]; then
+    openssl req -x509 -newkey rsa:2048 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+      -subj "/CN=forsteri.southeastasia.cloudapp.azure.com"
+fi
+
+# 3. Update vite.config.ts for HTTPS
+echo "Updating vite.config.ts for HTTPS..."
+cat > vite.config.ts << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    open: false,
+    cors: true,
+    allowedHosts: true,
+    hmr: false,
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'ssl/key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'ssl/cert.pem')),
+    }
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    strictPort: true,
+    cors: true,
+    allowedHosts: true
+  },
+  base: './'
+})
+EOF
+
+# 4. Run normal deployment
+./start-azure.sh
+
+echo ""
+echo "🔒 HTTPS enabled! Access via:"
+echo "   https://forsteri.southeastasia.cloudapp.azure.com:5173"
+echo ""
+echo "⚠️  Browser will show security warning for self-signed certificate."
+echo "   Click 'Advanced' -> 'Proceed to forsteri.southeastasia.cloudapp.azure.com'"
+```
+
+### 访问地址更新
+
+**使用 Let's Encrypt (推荐):**
+- **HTTPS 访问**: https://forsteri.southeastasia.cloudapp.azure.com
+
+**使用自签名证书:**
+- **HTTPS 访问**: https://forsteri.southeastasia.cloudapp.azure.com:5173
+- **注意**: 浏览器会显示安全警告，需要点击"高级"→"继续访问"
+
+### 快速部署 HTTPS
+
+```bash
+# 方案1: Let's Encrypt (需要域名)
+sudo apt install nginx certbot python3-certbot-nginx
+sudo certbot --nginx -d forsteri.southeastasia.cloudapp.azure.com
+
+# 方案2: 自签名证书 (立即可用)
+chmod +x start-azure-https.sh
+./start-azure-https.sh
+```
+
+### 故障排除
+
+**SSL 证书问题:**
+```bash
+# 检查证书
+openssl x509 -in ssl/cert.pem -text -noout
+
+# 重新生成证书
+rm -rf ssl
+mkdir ssl
+openssl req -x509 -newkey rsa:2048 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
+  -subj "/CN=forsteri.southeastasia.cloudapp.azure.com"
+```
+
+**端口冲突:**
+```bash
+# 检查端口占用
+sudo netstat -tlnp | grep :443
+sudo netstat -tlnp | grep :5173
+
+# 开放防火墙端口 (如果需要)
+sudo ufw allow 443
+sudo ufw allow 5173
+```

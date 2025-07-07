@@ -9,8 +9,40 @@ interface FolderSetupProps {
 export const FolderSetup: React.FC<FolderSetupProps> = ({ onDone }) => {
   const [error, setError] = useState('');
 
+  // Check if File System Access API is supported
+  const isFileSystemAccessSupported = (): boolean => {
+    return 'showDirectoryPicker' in window && 
+           typeof (window as any).showDirectoryPicker === 'function' &&
+           window.isSecureContext;
+  };
+
+  const getCompatibilityError = (): string => {
+    const isSecure = window.isSecureContext;
+    const hasAPI = 'showDirectoryPicker' in window;
+    
+    if (!hasAPI) {
+      return 'Your browser does not support the File System Access API. Please use Chrome 86+, Edge 86+, or Opera 72+.';
+    }
+    
+    if (!isSecure) {
+      return 'File System Access API requires HTTPS. Please access via HTTPS or use the HTTPS setup script.';
+    }
+    
+    return 'File System Access API is not available in this context.';
+  };
+
   const handlePick = async () => {
     try {
+      setError('');
+      
+      // Check browser compatibility first
+      if (!isFileSystemAccessSupported()) {
+        const errorMsg = getCompatibilityError();
+        setError(errorMsg);
+        console.error('File System Access API not supported:', errorMsg);
+        return;
+      }
+
       const dirHandle = await (window as any).showDirectoryPicker();
       const required = ['todos.csv', 'daily_ideas.csv', 'categories.json', 'activities.csv'];
       const missing: string[] = [];
@@ -49,7 +81,11 @@ export const FolderSetup: React.FC<FolderSetupProps> = ({ onDone }) => {
         if (error.name === 'AbortError') {
           setError('Folder selection was canceled');
         } else if (error.name === 'NotSupportedError') {
-          setError('File System Access API is not supported in this browser. Please use Chrome, Edge, or another compatible browser.');
+          setError(getCompatibilityError());
+        } else if (error.name === 'SecurityError') {
+          setError('Browser security policy prevented folder access. Please ensure you are using HTTPS.');
+        } else if (error.message.includes('showDirectoryPicker is not a function')) {
+          setError(getCompatibilityError());
         } else {
           setError(`Error: ${error.message}`);
         }
@@ -85,18 +121,48 @@ export const FolderSetup: React.FC<FolderSetupProps> = ({ onDone }) => {
       }}>
         Select your data folder
       </h2>
+      
+      {!isFileSystemAccessSupported() && (
+        <div style={{
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffeaa7',
+          borderRadius: '8px',
+          padding: '15px',
+          marginBottom: '20px',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          textAlign: 'left',
+          maxWidth: '500px'
+        }}>
+          <strong>⚠️ Browser Compatibility Issue</strong>
+          <br />
+          {getCompatibilityError()}
+          <br /><br />
+          <strong>Requirements:</strong>
+          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+            <li>Chrome 86+, Edge 86+, or Opera 72+</li>
+            <li>HTTPS protocol (secure context)</li>
+          </ul>
+          <strong>Solution:</strong>
+          <br />
+          Run the HTTPS setup script: <code>./start-azure-https.sh</code>
+        </div>
+      )}
+      
       <button 
         onClick={handlePick}
+        disabled={!isFileSystemAccessSupported()}
         style={{
-          border: '1.5px solid #4F8EF7',
+          border: `1.5px solid ${isFileSystemAccessSupported() ? '#4F8EF7' : '#ccc'}`,
           borderRadius: '6px',
           padding: '0.8em 2em',
-          background: '#4F8EF7',
-          color: '#fff',
-          cursor: 'pointer',
+          background: isFileSystemAccessSupported() ? '#4F8EF7' : '#f5f5f5',
+          color: isFileSystemAccessSupported() ? '#fff' : '#999',
+          cursor: isFileSystemAccessSupported() ? 'pointer' : 'not-allowed',
           fontSize: '1em',
           fontWeight: 500,
-          marginBottom: '2em'
+          marginBottom: '2em',
+          transition: 'all 0.2s ease'
         }}
       >
         Select Folder
